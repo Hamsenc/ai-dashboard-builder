@@ -1,7 +1,7 @@
 -- Blueprint đã duyệt -> artifact thực thi được, đã validate. Khác Blueprint
 -- (spec nghiệp vụ, dễ đọc) ở chỗ Build là SQL+chart-config đã qua validator,
 -- được app dùng để chạy thật và để Refresh.
-CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.dashboard_builder_builds` (
+CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.raw_dashboard_builder_builds` (
   build_id                STRING NOT NULL,
   blueprint_id             STRING NOT NULL,  -- version blueprint cụ thể đã duyệt sinh ra build này
   dashboard_id               STRING NOT NULL,

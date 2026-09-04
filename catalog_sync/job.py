@@ -29,6 +29,7 @@ from lark_client import get_tenant_access_token, list_records
 from merge import build_catalog
 
 LARK_TABLE_02_ID = "tblA61jccZSexp2F"  # "02. Table Catalog"
+LARK_TABLE_03_ID = "tblfoft2R9IZcl00"  # "03. Column Dictionary"
 LARK_TABLE_04_ID = "tblNr2LJO47ClgWW"  # "04. Business Logic - KPI"
 
 # Đối chiếu con số đã biết thật (khảo sát 2026-09-03) — sync không được coi là thành
@@ -62,13 +63,17 @@ def run(project_id: str, bq_dataset: str, table_prefix: str, gcs_bucket: str) ->
 
     token = get_tenant_access_token(lark_host, lark_app_id, lark_app_secret)
     table_records = list(list_records(lark_host, token, lark_base_token, LARK_TABLE_02_ID))
+    column_dict_records = list(list_records(lark_host, token, lark_base_token, LARK_TABLE_03_ID))
     kpi_records = list(list_records(lark_host, token, lark_base_token, LARK_TABLE_04_ID))
 
     bq_client = bigquery.Client(project=project_id)
     info_schema = fetch_columns(bq_client, project_id, _table_ids_by_dataset(table_records))
 
     generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    catalog = build_catalog(table_records, kpi_records, info_schema, generated_at)
+    catalog = build_catalog(
+        table_records, kpi_records, info_schema, generated_at,
+        column_dict_records=column_dict_records,
+    )
 
     table_count = len(catalog["tables"])
     kpi_total = len(catalog["kpis"]) + len(catalog["out_of_scope_kpis"])

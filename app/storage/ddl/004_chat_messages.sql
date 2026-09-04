@@ -1,7 +1,7 @@
 -- Log transcript/audit lâu dài. KHÔNG phải nơi lưu session hot-path — state
 -- hội thoại đang chạy giữ in-process trên instance Cloud Run trong phiên đó;
 -- bảng này chỉ là bản ghi bền để audit/debug sau này.
-CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.dashboard_builder_chat_messages` (
+CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.raw_dashboard_builder_chat_messages` (
   message_id           STRING NOT NULL,
   session_id             STRING NOT NULL,
   dashboard_id              STRING,           -- NULL tới khi session này có blueprint

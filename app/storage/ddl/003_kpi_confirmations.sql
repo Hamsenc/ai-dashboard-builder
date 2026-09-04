@@ -1,6 +1,6 @@
 -- Audit append-only: mỗi lần 1 KPI Status=Draft được dùng/xác nhận lại.
 -- Đây là bằng chứng cụ thể cho luật "không bao giờ âm thầm đổi KPI".
-CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.dashboard_builder_kpi_confirmations` (
+CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.raw_dashboard_builder_kpi_confirmations` (
   confirmation_id            STRING NOT NULL,
   blueprint_id                 STRING NOT NULL,
   dashboard_id                    STRING NOT NULL,

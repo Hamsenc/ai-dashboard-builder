@@ -1,10 +1,15 @@
-"""Gộp 3 nguồn thành 1 catalog JSON duy nhất mà Planner/Builder đọc:
+"""Gộp 4 nguồn thành 1 catalog JSON duy nhất mà Data Explorer đọc:
 
 1. Lark '02. Table Catalog' (đã lọc Layer=Serving ở tầng gọi module này) — caveat
    nghiệp vụ cấp bảng, giữ NGUYÊN VĂN, không tóm tắt.
 2. BigQuery INFORMATION_SCHEMA (qua information_schema.py) — cột/kiểu dữ liệu ground-truth.
 3. Lark '04. Business Logic - KPI' — công thức + Status (Draft/Active), join theo
    Table_ID (record link) về đúng bảng trong nguồn 1.
+4. Lark '03. Column Dictionary' — mô tả/tên thân thiện CẤP CỘT (Business
+   Definition, Tên thân thiện, Calculation/Logic, Example), join theo Table_ID
+   (record link) về đúng bảng, rồi khớp tiếp theo tên cột. Nguồn 2 quyết định CỘT
+   NÀO tồn tại (ground-truth); nguồn 4 chỉ làm giàu THÊM cho cột đã có, không tự
+   thêm cột lạ nếu Column Dictionary có tên cột không khớp BigQuery.
 
 KPI có ít nhất 1 bảng nguồn nằm trong whitelist Serving -> vào `kpis`.
 KPI không có bảng nguồn nào nằm trong whitelist (vd Marketing/Customer domain
@@ -45,6 +50,14 @@ KPI_FIELD_GRAIN = "Grain"
 KPI_FIELD_STATUS = "Status"
 KPI_FIELD_TIME_RULE = "Time Rule"
 KPI_FIELD_TYPE = "Type"
+
+COLDICT_FIELD_TABLE_ID_LINK = "Table_ID"
+COLDICT_FIELD_COL_NAME = "Col_name"
+COLDICT_FIELD_FRIENDLY_NAME = "Tên thân thiện"
+COLDICT_FIELD_BUSINESS_DEF = "Business Definition"
+COLDICT_FIELD_CALC_LOGIC = "Calculation / Logic"
+COLDICT_FIELD_EXAMPLE = "Example"
+COLDICT_FIELD_STATUS = "Status"
 
 
 @dataclass
@@ -129,6 +142,37 @@ def attach_columns(
         ]
 
 
+def attach_column_dictionary(
+    tables_by_record_id: dict[str, TableEntry],
+    column_dict_records: list[dict[str, Any]],
+) -> None:
+    """Gắn mô tả/tên thân thiện cấp cột (Lark '03. Column Dictionary') vào đúng
+    cột đã có sẵn trong TableEntry.columns (nguồn từ BigQuery INFORMATION_SCHEMA,
+    xem attach_columns) — khớp theo tên cột. Cột trong Column Dictionary nhưng
+    KHÔNG khớp tên cột thật nào của bảng đó (tài liệu cũ/gõ sai) bị bỏ qua, không
+    tự thêm cột lạ vào catalog."""
+    for rec in column_dict_records:
+        f = rec["fields"]
+        col_name = field_text(f.get(COLDICT_FIELD_COL_NAME))
+        if not col_name:
+            continue
+        linked_ids = linked_record_ids(f.get(COLDICT_FIELD_TABLE_ID_LINK))
+        info = {
+            "friendly_name": field_text(f.get(COLDICT_FIELD_FRIENDLY_NAME)),
+            "description": field_text(f.get(COLDICT_FIELD_BUSINESS_DEF)),
+            "calculation_logic": field_text(f.get(COLDICT_FIELD_CALC_LOGIC)),
+            "example": field_text(f.get(COLDICT_FIELD_EXAMPLE)),
+            "dictionary_status": field_text(f.get(COLDICT_FIELD_STATUS)),
+        }
+        for rid in linked_ids:
+            entry = tables_by_record_id.get(rid)
+            if not entry:
+                continue
+            for col in entry.columns:
+                if col["name"] == col_name:
+                    col.update(info)
+
+
 def parse_and_link_kpis(
     kpi_records: list[dict[str, Any]],
     tables_by_record_id: dict[str, TableEntry],
@@ -187,9 +231,12 @@ def build_catalog(
     kpi_records: list[dict[str, Any]],
     info_schema: dict[tuple[str, str], list[ColumnInfo]],
     generated_at: str,
+    column_dict_records: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     tables_by_record_id = parse_table_catalog(table_catalog_records)
     attach_columns(tables_by_record_id, info_schema)
+    if column_dict_records:
+        attach_column_dictionary(tables_by_record_id, column_dict_records)
     kpis, out_of_scope_kpis = parse_and_link_kpis(kpi_records, tables_by_record_id)
 
     return {

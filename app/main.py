@@ -1,22 +1,21 @@
-"""FastAPI app: chat + blueprint + dashboard API + Lark OAuth, phục vụ luôn static
-SPA ở /."""
+"""FastAPI app: Data Explorer (duyệt bảng, xem trước dữ liệu, tư vấn chọn bảng) +
+Lark OAuth, phục vụ luôn static SPA ở /."""
 
 from __future__ import annotations
 
 import pathlib
 
-from api import blueprint, chat, dashboard
+from api import advise, catalog
 from auth import lark_oauth
 from auth.deps import get_current_user
 from catalog.client import load_catalog
 from fastapi import Depends, FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(title="AI Dashboard Builder")
+app = FastAPI(title="Data Explorer")
 
-app.include_router(chat.router)
-app.include_router(blueprint.router)
-app.include_router(dashboard.router)
+app.include_router(catalog.router)
+app.include_router(advise.router)
 app.include_router(lark_oauth.router)
 
 
@@ -29,7 +28,8 @@ async def get_me(request: Request, user: str = Depends(get_current_user)):
 @app.on_event("startup")
 async def warm_catalog_cache() -> None:
     # Không chặn app khởi động nếu GCS/catalog lỗi — lỗi sẽ nổi lên rõ ràng ở lần
-    # gọi /api/chat/message đầu tiên thay vì làm cả service down.
+    # gọi đầu tiên cần tới enrich (bq_meta.enrich_from_lark) thay vì làm cả service
+    # down. Catalog Lark giờ chỉ là làm giàu tuỳ chọn, không phải nguồn bắt buộc.
     try:
         load_catalog()
     except Exception as e:  # noqa: BLE001

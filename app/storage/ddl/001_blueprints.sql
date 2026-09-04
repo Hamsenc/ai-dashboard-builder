@@ -1,6 +1,6 @@
 -- Một dòng = 1 phiên bản Blueprint. dashboard_id ổn định xuyên suốt vòng đời
 -- dashboard; version tăng dần; "hiện hành" = version mới nhất theo dashboard_id.
-CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.dashboard_builder_blueprints` (
+CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.raw_dashboard_builder_blueprints` (
   blueprint_id          STRING NOT NULL,   -- UUID, duy nhất theo từng version
   dashboard_id          STRING NOT NULL,   -- ổn định xuyên suốt các version của "cùng 1 dashboard"
   version                INT64 NOT NULL,   -- tăng dần trong phạm vi dashboard_id, bắt đầu từ 1

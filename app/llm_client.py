@@ -15,6 +15,7 @@ import os
 from typing import Any
 
 from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ResultMessage, TextBlock, query
+from claude_agent_sdk._errors import ClaudeSDKError
 
 
 class LLMError(RuntimeError):
@@ -38,11 +39,14 @@ async def run_text(system_prompt: str, prompt: str) -> str:
     gộp từ các TextBlock trong AssistantMessage."""
     options = _base_options(system_prompt, output_format=None)
     chunks: list[str] = []
-    async for message in query(prompt=prompt, options=options):
-        if isinstance(message, AssistantMessage):
-            for block in message.content:
-                if isinstance(block, TextBlock):
-                    chunks.append(block.text)
+    try:
+        async for message in query(prompt=prompt, options=options):
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        chunks.append(block.text)
+    except ClaudeSDKError as e:
+        raise LLMError(f"Claude Code CLI lỗi: {e}") from e
     text = "".join(chunks)
     if not text:
         raise LLMError("Claude không trả về nội dung nào (rỗng) — kiểm tra CLAUDE_CODE_OAUTH_TOKEN/model.")
@@ -58,9 +62,17 @@ async def run_structured(system_prompt: str, prompt: str, json_schema: dict[str,
     options = _base_options(system_prompt, output_format={"type": "json_schema", "schema": json_schema})
 
     result: ResultMessage | None = None
-    async for message in query(prompt=prompt, options=options):
-        if isinstance(message, ResultMessage):
-            result = message
+    try:
+        async for message in query(prompt=prompt, options=options):
+            if isinstance(message, ResultMessage):
+                result = message
+    except ClaudeSDKError as e:
+        # Bao gồm cả trường hợp CLI trả lỗi trước khi kịp có ResultMessage nào (vd
+        # hết quota phiên, CLI crash) — SDK raise thẳng exception riêng của nó
+        # (ResultError/ProcessError/...) thay vì đi qua nhánh result.is_error bên
+        # dưới. Không bọc lại thành LLMError thì lỗi này bay thẳng thành 500 trần
+        # trụi ở tầng API, không có thông báo tiếng Việt nào cho user.
+        raise LLMError(f"Claude Code CLI lỗi: {e}") from e
 
     if result is None:
         raise LLMError("Không nhận được ResultMessage nào từ Claude.")

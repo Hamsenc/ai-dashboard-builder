@@ -17,7 +17,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "catalog
 from google.cloud import bigquery
 
 from information_schema import fetch_columns
-from merge import build_catalog
+from merge import attach_column_dictionary, build_catalog, parse_table_catalog
 
 # 5 dòng thật từ '02. Table Catalog', Layer=Serving, domain Sales (record_id thật).
 TABLE_CATALOG_RECORDS = [
@@ -174,6 +174,59 @@ KPI_RECORDS = [
 ]
 
 
+def test_attach_column_dictionary_matches_by_table_and_column_name():
+    """Thuần, không cần BigQuery — record thật lấy từ Lark '03. Column Dictionary'
+    lúc khảo sát (surya-495408.00_serving_inventory.vw_inventory_position.doh_avail),
+    kèm 1 dòng khớp table nhưng SAI tên cột để verify không tự thêm cột lạ."""
+    tables_by_record_id = parse_table_catalog(TABLE_CATALOG_RECORDS)
+    entry = tables_by_record_id["recvsZU53SRano"]  # vw_business_daily
+    entry.columns = [
+        {"name": "date", "type": "DATE", "nullable": True},
+        {"name": "gmv_created", "type": "FLOAT64", "nullable": True},
+    ]
+
+    column_dict_records = [
+        {
+            "record_id": "recCD1",
+            "fields": {
+                "Table_ID": [{"id": "recvsZU53SRano"}],
+                "Col_name": "gmv_created",
+                "Tên thân thiện": "Tổng giá trị đơn hàng (tạo mới)",
+                "Business Definition": "Tổng GMV tạo mới trong kỳ (9999 = không tính, dữ liệu chưa đủ).",
+                "Calculation / Logic": "SUM(gmv_created)",
+                "Example": "",
+                "Status": "Active",
+            },
+        },
+        {
+            "record_id": "recCD2",
+            "fields": {
+                "Table_ID": [{"id": "recvsZU53SRano"}],
+                "Col_name": "cot_khong_ton_tai",  # không khớp cột thật nào -> phải bị bỏ qua
+                "Tên thân thiện": "Không nên xuất hiện",
+                "Business Definition": "",
+                "Calculation / Logic": "",
+                "Example": "",
+                "Status": "Active",
+            },
+        },
+    ]
+
+    attach_column_dictionary(tables_by_record_id, column_dict_records)
+
+    gmv_col = next(c for c in entry.columns if c["name"] == "gmv_created")
+    assert gmv_col["friendly_name"] == "Tổng giá trị đơn hàng (tạo mới)"
+    assert "9999" in gmv_col["description"]
+
+    date_col = next(c for c in entry.columns if c["name"] == "date")
+    assert "friendly_name" not in date_col, "cột không có trong Column Dictionary thì không bị đổi"
+
+    col_names = {c["name"] for c in entry.columns}
+    assert "cot_khong_ton_tai" not in col_names, "không được tự thêm cột lạ không khớp BigQuery"
+
+    print("OK — attach_column_dictionary")
+
+
 def test_build_catalog_with_real_data():
     client = bigquery.Client(project="surya-495408")
     info_schema = fetch_columns(
@@ -226,4 +279,5 @@ def test_build_catalog_with_real_data():
 
 
 if __name__ == "__main__":
+    test_attach_column_dictionary_matches_by_table_and_column_name()
     test_build_catalog_with_real_data()

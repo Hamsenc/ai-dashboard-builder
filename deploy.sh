@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy AI Dashboard Builder (FastAPI app) lên Cloud Run, project surya-495408.
+# Deploy Data Explorer (FastAPI app) lên Cloud Run, project surya-495408.
 # Chạy từng bước thủ công (chưa có CI), theo đúng convention dashboard-load-proxy.
 set -euo pipefail
 
@@ -38,6 +38,9 @@ echo "== Deploy Cloud Run service (build từ Dockerfile qua Cloud Build) =="
 # nhận 536-558 MiB dùng, vượt hạn mức) — mỗi lượt gọi LLM spawn thêm 1 tiến trình
 # Node.js (Claude Agent SDK CLI) chạy song song với Python trong cùng container,
 # cộng dồn vượt 512Mi dễ dàng.
+# "^;^" đổi delimiter của --set-env-vars từ dấu phẩy sang chấm phẩy — SERVING_DATASETS
+# tự nó chứa dấu phẩy (danh sách dataset), để mặc định gcloud sẽ tách nhầm thành nhiều
+# biến môi trường rác.
 gcloud run deploy "$SERVICE_NAME" \
   --project="$PROJECT_ID" \
   --region="$REGION" \
@@ -47,7 +50,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --memory=1Gi \
   --timeout=540s \
   --max-instances=5 \
-  --set-env-vars="GCP_PROJECT=${PROJECT_ID},GCP_REGION=${REGION},BQ_APP_DATASET=12_data_agent_log,BQ_APP_TABLE_PREFIX=raw_dashboard_builder_,CATALOG_GCS_BUCKET=surya-495408-dashboard-builder-catalog,LARK_BASE_TOKEN=AcITbzsvraObhisDdQXlO6tggkd,LARK_TABLE_CATALOG_ID=tblA61jccZSexp2F,LARK_TABLE_KPI_ID=tblNr2LJO47ClgWW,LARK_OAUTH_HOST=https://open.larksuite.com,CLAUDE_MODEL=claude-sonnet-5,LARK_APP_ID=${LARK_APP_ID:?Set LARK_APP_ID env var trước khi chạy (không phải secret nhưng cũng không nên hardcode trong script commit lên git)}" \
+  --set-env-vars="^;^GCP_PROJECT=${PROJECT_ID};GCP_REGION=${REGION};BQ_APP_DATASET=12_data_agent_log;BQ_APP_TABLE_PREFIX=raw_dashboard_builder_;CATALOG_GCS_BUCKET=surya-495408-dashboard-builder-catalog;SERVING_DATASETS=00_serving_sales,00_serving_inventory,00_serving_operation;LARK_BASE_TOKEN=AcITbzsvraObhisDdQXlO6tggkd;LARK_TABLE_CATALOG_ID=tblA61jccZSexp2F;LARK_TABLE_KPI_ID=tblNr2LJO47ClgWW;LARK_OAUTH_HOST=https://open.larksuite.com;CLAUDE_MODEL=claude-sonnet-5;LARK_APP_ID=${LARK_APP_ID:?Set LARK_APP_ID env var trước khi chạy (không phải secret nhưng cũng không nên hardcode trong script commit lên git)}" \
   --set-secrets="CLAUDE_CODE_OAUTH_TOKEN=dashboard-builder-claude-code-oauth-token:latest,LARK_APP_SECRET=dashboard-builder-lark-app-secret:latest,SESSION_SECRET=dashboard-builder-session-secret:latest"
 
 echo "== Xong. URL service (public ở tầng mạng, gác cổng bằng Lark OAuth ở tầng app): =="
