@@ -1,0 +1,112 @@
+/* Design token + base reset dùng chung cho app (index.html) và preview harness
+   (preview/index.html). Đây là NGUỒN THẬT của bảng màu — sửa ở đây, không copy. */
+
+:root {
+  color-scheme: light;
+  --page:            #f9f9f7;
+  --surface:         #fcfcfb;
+  --surface-2:       #f3f2ee;
+  --ink-primary:     #0b0b0b;
+  --ink-secondary:   #52514e;
+  --ink-muted:       #898781;
+  --gridline:        #e1e0d9;
+  --baseline:        #c3c2b7;
+  --series-1:        #2a78d6;
+  --series-2:        #eb6834;
+  --series-3:        #1baf7a;
+  --series-4:        #eda100;
+  --series-5:        #e87ba4;
+  --series-6:        #008300;
+  --series-7:        #4a3aa7;
+  --series-8:        #e34948;
+  --series-9:        #00909e;
+  --series-10:       #8a5a2b;
+  --series-11:       #a03fa0;
+  --series-12:       #66762c;
+  --series-rollup:   #9a988f;
+  --series-1-wash:   rgba(42,120,214,0.10);
+  --good:            #006300;
+  --critical:        #d03b3b;
+  --warning-bg:      #fab219;
+  --warning-ink:     #3a2a00;
+  --border:          rgba(11,11,11,0.10);
+  --user-bubble:     #e7effb;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:            #0d0d0d;
+    --surface:         #1a1a19;
+    --surface-2:       #232322;
+    --ink-primary:     #ffffff;
+    --ink-secondary:   #c3c2b7;
+    --ink-muted:       #898781;
+    --gridline:        #2c2c2a;
+    --baseline:        #383835;
+    --series-1:        #3987e5;
+    --series-2:        #d95926;
+    --series-3:        #199e70;
+    --series-4:        #c98500;
+    --series-5:        #d55181;
+    --series-6:        #008300;
+    --series-7:        #9085e9;
+    --series-8:        #e66767;
+    --series-9:        #22b3c4;
+    --series-10:       #b5793d;
+    --series-11:       #c563c5;
+    --series-12:       #93a63f;
+    --series-rollup:   #6e6c66;
+    --series-1-wash:   rgba(57,135,229,0.16);
+    --good:            #0ca30c;
+    --critical:        #e66767;
+    --warning-bg:      #c98500;
+    --warning-ink:     #0b0b0b;
+    --border:          rgba(255,255,255,0.12);
+    --user-bubble:     #1c2a3c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:            #0d0d0d;
+  --surface:         #1a1a19;
+  --surface-2:       #232322;
+  --ink-primary:     #ffffff;
+  --ink-secondary:   #c3c2b7;
+  --ink-muted:       #898781;
+  --gridline:        #2c2c2a;
+  --baseline:        #383835;
+  --series-1:        #3987e5;
+  --series-2:        #d95926;
+  --series-3:        #199e70;
+  --series-4:        #c98500;
+  --series-5:        #d55181;
+  --series-6:        #008300;
+  --series-7:        #9085e9;
+  --series-8:        #e66767;
+  --series-9:        #22b3c4;
+  --series-10:       #b5793d;
+  --series-11:       #c563c5;
+  --series-12:       #93a63f;
+  --series-rollup:   #6e6c66;
+  --series-1-wash:   rgba(57,135,229,0.16);
+  --good:            #0ca30c;
+  --critical:        #e66767;
+  --warning-bg:      #c98500;
+  --warning-ink:     #0b0b0b;
+  --border:          rgba(255,255,255,0.12);
+  --user-bubble:     #1c2a3c;
+}
+
+/* Chỉ reset trung tính ở đây. Layout của body (flex 2 cột ở app, cuộn dọc ở preview)
+   là việc của từng trang — để ở file dùng chung sẽ ép preview vào layout của app. */
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  margin: 0;
+  background: var(--page); color: var(--ink-primary);
+}
+
+/* Selector kiểu #id { display: flex } có specificity cao hơn [hidden] nên nuốt mất
+   thuộc tính hidden (đang xảy ra với #filter-row và #dashboard-header: hiện ra cả khi
+   chưa có dashboard nào). !important để hidden luôn thắng. */
+[hidden] { display: none !important; }

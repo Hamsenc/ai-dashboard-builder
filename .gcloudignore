@@ -1,0 +1,14 @@
+# deploy.sh dùng `gcloud run deploy --source=.` -> mọi thứ ở đây được upload lên
+# bucket staging của Cloud Build. Dockerfile chỉ COPY requirements.txt + app/, nên
+# phần còn lại không vào image — nhưng fixture preview chứa số liệu kinh doanh THẬT,
+# không có lý do gì để nó rời khỏi máy dev.
+.git/
+.gitignore
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+preview/
+tests/
+scripts/

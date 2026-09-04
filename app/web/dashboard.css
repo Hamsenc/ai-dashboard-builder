@@ -1,0 +1,101 @@
+/* CSS của renderer dashboard (card/tile/chart/table) — cặp đôi với renderer.js.
+   Dùng chung app thật và preview harness để 2 bên không bao giờ lệch nhau. */
+
+/* Gốc của renderer. container-type cho phép chart tự co về 1 cột theo BỀ RỘNG CỦA
+   KHUNG CHỨA chứ không theo bề rộng cửa sổ — nhờ vậy 2 pane hẹp của preview harness
+   hiển thị đúng như app thật ở màn hình nhỏ. */
+.dash { container-type: inline-size; display: flex; flex-direction: column; gap: 20px; }
+
+/* Hàng tile: trả lời "bao nhiêu" trước khi hỏi "diễn biến thế nào" */
+.dash-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.tile {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px;
+}
+/* min-height để badge Draft xuống dòng ở 1 tile không đẩy con số của tile đó lệch so
+   với các tile bên cạnh — hàng tile phải đọc được theo hàng ngang. */
+.tile-head {
+  display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 8px; min-height: 32px;
+}
+.tile-name {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-muted);
+}
+.tile-value { font-size: 26px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile-caption { font-size: 11.5px; color: var(--ink-muted); margin-top: 5px; }
+.tile-delta { font-size: 12px; font-weight: 600; margin-top: 7px; }
+.tile-delta.up { color: var(--good); }
+.tile-delta.down { color: var(--critical); }
+
+.dash-section {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-secondary); margin: 2px 0 -10px;
+}
+
+.dash-charts { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+@container (max-width: 780px) {
+  .dash-charts > .kpi-card { grid-column: span 12 !important; }
+  .tile-value { font-size: 23px; }
+}
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 20px; position: relative;
+}
+.kpi-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.kpi-name { font-size: 13px; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.02em; }
+.draft-badge {
+  background: var(--warning-bg); color: var(--warning-ink); padding: 2px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap;
+}
+
+/* stat tile */
+.stat-value { font-size: 34px; font-weight: 650; line-height: 1.15; margin-top: 6px; font-variant-numeric: proportional-nums; }
+.stat-delta { font-size: 13px; font-weight: 600; margin-top: 4px; }
+.stat-delta.up { color: var(--good); }
+.stat-delta.down { color: var(--critical); }
+.stat-sparkline { margin-top: 10px; }
+
+/* chart (Chart.js canvas) */
+.chart-wrap { position: relative; margin-top: 8px; height: 220px; }
+.chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+/* table */
+.kpi-table { border-collapse: collapse; width: 100%; margin-top: 8px; font-size: 12.5px; }
+.kpi-table th {
+  text-align: left; padding: 6px 10px; color: var(--ink-muted); font-weight: 600;
+  border-bottom: 1px solid var(--baseline); font-size: 11px; text-transform: uppercase;
+}
+.kpi-table td { padding: 6px 10px; border-bottom: 1px solid var(--gridline); font-variant-numeric: tabular-nums; }
+.kpi-table tr:nth-child(even) td { background: var(--surface-2); }
+.kpi-table-scroll { max-height: 260px; overflow-y: auto; }
+
+/* legend tự vẽ (HTML) — nằm NGOÀI canvas nên không ăn vào chiều cao vùng vẽ */
+.chart-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  margin: 8px 0 2px; font-size: 11.5px; color: var(--ink-secondary);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.legend-item i { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+/* ghi chú dưới chart: nói rõ phần dữ liệu đã gộp, không im lặng giấu series */
+.chart-note { margin: 8px 0 0; font-size: 11.5px; color: var(--ink-muted); line-height: 1.45; }
+
+/* Định nghĩa KPI: mặc định gấp lại, mở ra là nguyên văn definition trong blueprint */
+.kpi-def { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
+.kpi-def summary {
+  font-size: 11.5px; color: var(--ink-muted); cursor: pointer; list-style: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.kpi-def summary::-webkit-details-marker { display: none; }
+.kpi-def summary::before { content: '›'; display: inline-block; transition: transform 0.12s; }
+.kpi-def[open] summary::before { transform: rotate(90deg); }
+.kpi-def summary:hover { color: var(--ink-secondary); }
+.kpi-def p {
+  margin: 8px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--ink-secondary);
+  white-space: pre-wrap;
+}
+
+/* Card chiếm trọn hàng thì cho vùng vẽ cao hơn — cùng chiều cao với card nửa hàng sẽ
+   ra một dải chart bẹt và trống trải. */
+.card-wide .chart-wrap { height: 280px; }

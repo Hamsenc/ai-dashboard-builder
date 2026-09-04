@@ -1,0 +1,108 @@
+{
+ "blueprint": {
+  "description": "Theo dõi tổng giá trị đơn hàng thành công (GMV Success) mỗi ngày, gộp toàn bộ thương hiệu/kênh bán/kho, trong 14 ngày gần nhất. Công thức đang ở trạng thái nháp (Draft), dùng tạm theo xác nhận của người dùng.",
+  "dimensions": [],
+  "filters": [],
+  "granularity": "day",
+  "kpis": [
+   {
+    "chart_type": "number",
+    "definition": "SUM(gmv_success) theo brand × channel × ngày, chỉ tính đơn có order_status = trạng thái thành công.\n⚠️ Quy tắc normalize \"thành công\" theo TỪNG kênh (Shopee/TikTok/Retail POS...) — tức phần logic per-source mà catalog này cần ghi lại — hiện KHÔNG có trong Column Dictionary (Calculation/Logic trống). Cần lấy từ chủ sở hữu pipeline 09_logic_serving trước khi chuyển Status sang Active, và bổ sung breakdown theo kênh vào field này.",
+    "name": "GMV (Success)",
+    "status": "Draft"
+   },
+   {
+    "chart_type": "line",
+    "definition": "SUM(gmv_success) theo brand × channel × ngày, chỉ tính đơn có order_status = trạng thái thành công.\n⚠️ Quy tắc normalize \"thành công\" theo TỪNG kênh (Shopee/TikTok/Retail POS...) — tức phần logic per-source mà catalog này cần ghi lại — hiện KHÔNG có trong Column Dictionary (Calculation/Logic trống). Cần lấy từ chủ sở hữu pipeline 09_logic_serving trước khi chuyển Status sang Active, và bổ sung breakdown theo kênh vào field này.",
+    "name": "GMV (Success)",
+    "status": "Draft"
+   }
+  ],
+  "refresh_policy": "manual",
+  "sources": [
+   "surya-495408.00_serving_sales.vw_business_daily"
+  ],
+  "time_range": "14 ngày gần nhất",
+  "title": "GMV Success theo ngày - Toàn công ty"
+ },
+ "results": [
+  {
+   "kpi_name": "GMV (Success)",
+   "x_field": "metric",
+   "y_field": "value",
+   "series_field": "",
+   "rows": [
+    {
+     "metric": "GMV (Success)",
+     "value": 38429299885.0
+    }
+   ]
+  },
+  {
+   "kpi_name": "GMV (Success)",
+   "x_field": "date",
+   "y_field": "value",
+   "series_field": "",
+   "rows": [
+    {
+     "date": "2026-08-22",
+     "value": 2903972837.0
+    },
+    {
+     "date": "2026-08-23",
+     "value": 2350330001.0
+    },
+    {
+     "date": "2026-08-24",
+     "value": 2737098830.0
+    },
+    {
+     "date": "2026-08-25",
+     "value": 3181172745.0
+    },
+    {
+     "date": "2026-08-26",
+     "value": 4175901733.0
+    },
+    {
+     "date": "2026-08-27",
+     "value": 3642801988.0
+    },
+    {
+     "date": "2026-08-28",
+     "value": 4120295713.0
+    },
+    {
+     "date": "2026-08-29",
+     "value": 3217246025.0
+    },
+    {
+     "date": "2026-08-30",
+     "value": 2464838148.0
+    },
+    {
+     "date": "2026-08-31",
+     "value": 2278328116.0
+    },
+    {
+     "date": "2026-09-01",
+     "value": 2398326146.0
+    },
+    {
+     "date": "2026-09-02",
+     "value": 1922649148.0
+    },
+    {
+     "date": "2026-09-03",
+     "value": 2733899460.0
+    },
+    {
+     "date": "2026-09-04",
+     "value": 302438995.0
+    }
+   ]
+  }
+ ],
+ "default_start_date": "2026-08-22",
+ "default_end_date": "2026-09-04"
+}

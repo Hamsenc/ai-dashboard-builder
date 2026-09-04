@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Dashboard Builder</title>
+<link rel="stylesheet" href="/theme.css" />
+<link rel="stylesheet" href="/dashboard.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- Renderer dashboard tách riêng, dùng chung với preview harness (preview/index.html)
+     để bản xem thử luôn khớp app thật. Không dùng defer: script inline cuối trang chạy
+     lúc parse, phải chắc chắn window.DashboardRenderer đã tồn tại trước đó. -->
+<script src="/renderer.js"></script>
+<style>
+  html, body { height: 100%; }
+  body { display: flex; height: 100vh; }
+
+  /* ---------- Chat pane ---------- */
+  #chat-pane {
+    width: 400px; flex-shrink: 0; display: flex; flex-direction: column;
+    background: var(--surface); border-right: 1px solid var(--border);
+  }
+  #chat-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); }
+  #chat-header h1 { font-size: 15px; font-weight: 600; margin: 0; }
+  #chat-header p { font-size: 12px; color: var(--ink-muted); margin: 4px 0 0; }
+  #messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { padding: 10px 13px; border-radius: 12px; white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; max-width: 88%; }
+  .msg.user { background: var(--user-bubble); align-self: flex-end; border-bottom-right-radius: 3px; }
+  .msg.planner { background: var(--surface-2); align-self: flex-start; border-bottom-left-radius: 3px; }
+  .msg.refuse { background: var(--surface-2); border: 1px solid var(--critical); align-self: flex-start; border-bottom-left-radius: 3px; }
+  .msg.system { background: transparent; color: var(--ink-muted); font-size: 12px; align-self: center; font-style: italic; }
+
+  #clarify-options { padding: 0 14px 10px; display: flex; flex-direction: column; gap: 10px; }
+  .clarify-group { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+  .clarify-question { font-size: 12.5px; font-weight: 600; margin-bottom: 8px; }
+  .clarify-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .clarify-pill {
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-primary);
+    border-radius: 999px; padding: 6px 12px; font-size: 12.5px; cursor: pointer;
+  }
+  .clarify-pill:hover { background: var(--series-1-wash); }
+  .clarify-pill.selected { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+  .clarify-extra-row { display: flex; gap: 6px; }
+  .clarify-extra-row input {
+    flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink-primary); font-size: 12.5px;
+  }
+  .clarify-extra-row button {
+    padding: 7px 12px; border: none; border-radius: 8px; background: var(--ink-primary);
+    color: var(--surface); font-weight: 600; cursor: pointer; font-size: 12.5px; white-space: nowrap;
+  }
+
+  #approve-row { padding: 0 14px 12px; }
+  #approve-row input {
+    width: 100%; padding: 8px 10px; margin-bottom: 8px; box-sizing: border-box;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    color: var(--ink-primary); font-size: 13px;
+  }
+  #approve-row button {
+    width: 100%; padding: 9px; border: none; border-radius: 8px;
+    background: var(--series-1); color: #fff; font-weight: 600; font-size: 13.5px; cursor: pointer;
+  }
+  #approve-row button:hover { opacity: 0.9; }
+  button:disabled, button.is-busy { opacity: 0.6; cursor: default; }
+
+  #input-row { display: flex; padding: 12px 14px; border-top: 1px solid var(--border); gap: 8px; }
+  #input-row input {
+    flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink-primary); font-size: 13.5px;
+  }
+  #input-row button {
+    padding: 9px 16px; border: none; border-radius: 8px; background: var(--ink-primary);
+    color: var(--surface); font-weight: 600; cursor: pointer; font-size: 13.5px;
+  }
+
+  /* ---------- Dashboard pane ---------- */
+  #dashboard-pane { flex: 1; padding: 28px 32px; overflow-y: auto; }
+  #dashboard-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; gap: 16px; }
+  #dashboard-title { font-size: 20px; font-weight: 650; margin: 0; }
+  #dashboard-desc { font-size: 13px; color: var(--ink-secondary); margin: 4px 0 0; max-width: 640px; }
+  #refresh-btn {
+    flex-shrink: 0; padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink-primary); font-size: 13px; cursor: pointer;
+  }
+  #refresh-btn:hover { background: var(--surface-2); }
+  #empty-state { color: var(--ink-muted); font-size: 13.5px; }
+
+  /* Bộ lọc ngày sống — 1 hàng, phía trên toàn bộ chart (áp dụng cho mọi chart cùng lúc) */
+  #filter-row { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .date-presets { display: flex; gap: 6px; }
+  .date-preset-btn {
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--surface); color: var(--ink-secondary); font-size: 12.5px; cursor: pointer;
+  }
+  .date-preset-btn:hover { background: var(--surface-2); }
+  .date-preset-btn.active { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+  .date-custom { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-muted); }
+  .date-custom input[type="date"] {
+    padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface); color: var(--ink-primary); font-size: 12.5px;
+  }
+  .date-custom button {
+    padding: 6px 12px; border: none; border-radius: 6px; background: var(--ink-primary);
+    color: var(--surface); font-weight: 600; cursor: pointer; font-size: 12.5px;
+  }
+
+  #dashboard-range { font-size: 12px; color: var(--ink-muted); margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div id="chat-pane">
+  <div id="chat-header">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <h1>AI Dashboard Builder</h1>
+      <button id="theme-toggle-btn" title="Đổi giao diện sáng/tối" style="border:1px solid var(--border); background:var(--surface); color:var(--ink-primary); border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px;">◐</button>
+    </div>
+    <p>Mô tả dashboard bạn muốn — mình hỏi làm rõ trước khi build.</p>
+    <p id="whoami" style="font-size:11px; color:var(--ink-muted); margin:4px 0 0;"></p>
+  </div>
+  <div id="messages"></div>
+  <div id="approve-row" hidden>
+    <input id="dashboard-id-input" placeholder="dashboard_id (vd: doanh-thu-hpvn)" />
+    <button id="approve-btn">Duyệt &amp; Build dashboard</button>
+  </div>
+  <div id="input-row">
+    <input id="message-input" placeholder="Mô tả dashboard bạn muốn..." />
+    <button id="send-btn">Gửi</button>
+  </div>
+</div>
+
+<div id="dashboard-pane">
+  <div id="dashboard-header" hidden>
+    <div>
+      <h2 id="dashboard-title"></h2>
+      <p id="dashboard-desc"></p>
+      <p id="dashboard-range"></p>
+    </div>
+    <button id="refresh-btn">↻ Refresh</button>
+  </div>
+  <div id="filter-row" hidden>
+    <div class="date-presets">
+      <button type="button" class="date-preset-btn" data-days="7">7 ngày</button>
+      <button type="button" class="date-preset-btn" data-days="14">14 ngày</button>
+      <button type="button" class="date-preset-btn" data-days="30">30 ngày</button>
+      <button type="button" class="date-preset-btn" data-days="90">90 ngày</button>
+    </div>
+    <div class="date-custom">
+      <input type="date" id="filter-start" />
+      <span>→</span>
+      <input type="date" id="filter-end" />
+      <button type="button" id="filter-apply-btn">Áp dụng</button>
+    </div>
+  </div>
+  <div id="kpi-grid"></div>
+  <p id="empty-state">Dashboard sẽ hiện ở đây sau khi bạn duyệt Blueprint.</p>
+</div>
+
+<script>
+(function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+  document.getElementById('theme-toggle-btn').onclick = () => {
+    const isDark = document.documentElement.dataset.theme === 'dark'
+      || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('theme', next);
+  };
+})();
+
+// Không còn prompt() xin dev-user mặc định — production yêu cầu đăng nhập Lark thật
+// (X-Dev-User chỉ có tác dụng khi server bật ALLOW_DEV_USER_HEADER=true, tức máy dev
+// cục bộ). Header vẫn gửi kèm (vô hại) để dev cục bộ dùng được mà không cần đổi gì
+// thêm ở frontend.
+let devUser = localStorage.getItem('dev_user') || 'dev@local';
+let isAuthenticated = false;
+
+async function initIdentity() {
+  const whoamiEl = document.getElementById('whoami');
+  try {
+    const res = await fetch('/api/me', {headers: {'X-Dev-User': devUser}});
+    if (res.ok) {
+      const me = await res.json();
+      isAuthenticated = true;
+      devUser = me.user;
+      whoamiEl.innerHTML = '';
+      const span = document.createElement('span');
+      span.textContent = me.authenticated_via_lark ? `Đăng nhập: ${me.user} · ` : `Dev user: ${me.user} · `;
+      const logout = document.createElement('a'); logout.href = '/auth/lark/logout'; logout.textContent = 'Đăng xuất';
+      whoamiEl.appendChild(span); whoamiEl.appendChild(logout);
+      return;
+    }
+  } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }
+
+  isAuthenticated = false;
+  whoamiEl.innerHTML = '';
+  const login = document.createElement('a'); login.href = '/auth/lark/login'; login.textContent = 'Đăng nhập Lark để bắt đầu';
+  whoamiEl.appendChild(login);
+}
+initIdentity();
+
+let sessionId = null;
+let pendingBlueprint = null;
+let currentDashboardId = null;
+let currentStartDate = null;
+let currentEndDate = null;
+
+const messagesEl = document.getElementById('messages');
+const approveRowEl = document.getElementById('approve-row');
+const kpiGridEl = document.getElementById('kpi-grid');
+const dashboardHeaderEl = document.getElementById('dashboard-header');
+const filterRowEl = document.getElementById('filter-row');
+const emptyStateEl = document.getElementById('empty-state');
+const refreshBtnEl = document.getElementById('refresh-btn');
+
+function addMessage(role, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.textContent = text; // untrusted content -> textContent, never innerHTML
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+async function apiFetch(path, opts = {}) {
+  opts.headers = Object.assign({'Content-Type': 'application/json', 'X-Dev-User': devUser}, opts.headers || {});
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+document.getElementById('send-btn').onclick = sendMessage;
+document.getElementById('message-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+function sendMessage() {
+  const input = document.getElementById('message-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  sendText(text);
+}
+
+async function sendText(text) {
+  if (!isAuthenticated) {
+    addMessage('refuse', 'Bạn cần đăng nhập Lark trước (link ở góc trên) mới chat được.');
+    return;
+  }
+  addMessage('user', text);
+  approveRowEl.hidden = true;
+  clearClarifyingOptions();
+
+  const sendBtn = document.getElementById('send-btn');
+  setButtonBusy(sendBtn, '...');
+  const thinkingMsg = document.createElement('div');
+  thinkingMsg.className = 'msg planner';
+  thinkingMsg.textContent = '💭 Đang xử lý...';
+  messagesEl.appendChild(thinkingMsg);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    if (currentDashboardId) {
+      const editResp = await apiFetch(`/api/dashboard/${currentDashboardId}/edit`, {
+        method: 'POST',
+        body: JSON.stringify({session_id: sessionId, message: text}),
+      });
+      const resp = editResp.chat;
+      sessionId = resp.session_id;
+      addMessage(resp.action === 'refuse_out_of_scope' ? 'refuse' : 'planner', resp.message_to_user);
+
+      if (editResp.applied) {
+        pendingBlueprint = resp.blueprint;
+        currentStartDate = editResp.applied.default_start_date;
+        currentEndDate = editResp.applied.default_end_date;
+        renderDashboard(pendingBlueprint, editResp.applied.results);
+        addMessage('system', 'Đã tự động áp dụng thay đổi cosmetic — không cần duyệt lại.');
+      } else if (resp.action === 'propose_blueprint' && resp.blueprint) {
+        pendingBlueprint = resp.blueprint;
+        approveRowEl.hidden = false;
+        document.getElementById('dashboard-id-input').value = currentDashboardId;
+      } else if (resp.action === 'clarify') {
+        renderClarifyingOptions(resp.clarifying_options);
+      }
+      return;
+    }
+
+    const resp = await apiFetch('/api/chat/message', {
+      method: 'POST',
+      body: JSON.stringify({session_id: sessionId, message: text}),
+    });
+    sessionId = resp.session_id;
+    addMessage(resp.action === 'refuse_out_of_scope' ? 'refuse' : 'planner', resp.message_to_user);
+
+    if (resp.action === 'propose_blueprint' && resp.blueprint) {
+      pendingBlueprint = resp.blueprint;
+      approveRowEl.hidden = false;
+    } else if (resp.action === 'clarify') {
+      renderClarifyingOptions(resp.clarifying_options);
+    }
+  } catch (e) {
+    addMessage('refuse', 'Lỗi: ' + e.message);
+  } finally {
+    thinkingMsg.remove();
+    clearButtonBusy(sendBtn);
+  }
+}
+
+/* ---------- Câu hỏi làm rõ dạng tick chọn ---------- */
+const clarifyOptionsEl = document.createElement('div');
+clarifyOptionsEl.id = 'clarify-options';
+messagesEl.after(clarifyOptionsEl);
+
+function clearClarifyingOptions() {
+  clarifyOptionsEl.innerHTML = '';
+}
+
+function renderClarifyingOptions(groups) {
+  clearClarifyingOptions();
+  if (!groups || groups.length === 0) return;
+
+  const selections = groups.map(() => new Set());
+
+  groups.forEach((group, gi) => {
+    const box = document.createElement('div');
+    box.className = 'clarify-group';
+    const q = document.createElement('div');
+    q.className = 'clarify-question';
+    q.textContent = group.question;
+    box.appendChild(q);
+
+    const opts = document.createElement('div');
+    opts.className = 'clarify-pills';
+    group.options.forEach((opt) => {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'clarify-pill';
+      pill.textContent = opt;
+      pill.onclick = () => {
+        if (group.allow_multiple) {
+          if (selections[gi].has(opt)) { selections[gi].delete(opt); pill.classList.remove('selected'); }
+          else { selections[gi].add(opt); pill.classList.add('selected'); }
+        } else {
+          selections[gi].clear();
+          selections[gi].add(opt);
+          opts.querySelectorAll('.clarify-pill').forEach(p => p.classList.remove('selected'));
+          pill.classList.add('selected');
+        }
+      };
+      opts.appendChild(pill);
+    });
+    box.appendChild(opts);
+    clarifyOptionsEl.appendChild(box);
+  });
+
+  const extraRow = document.createElement('div');
+  extraRow.className = 'clarify-extra-row';
+  const extraInput = document.createElement('input');
+  extraInput.placeholder = 'Gõ thêm nếu cần (không bắt buộc)...';
+  const submitBtn = document.createElement('button');
+  submitBtn.textContent = 'Gửi lựa chọn';
+  submitBtn.onclick = () => {
+    const parts = [];
+    groups.forEach((group, gi) => {
+      if (selections[gi].size > 0) parts.push(`${group.question} ${Array.from(selections[gi]).join(', ')}`);
+    });
+    const extra = extraInput.value.trim();
+    if (extra) parts.push(extra);
+    if (parts.length === 0) { alert('Chọn ít nhất 1 lựa chọn hoặc gõ thêm.'); return; }
+    sendText(parts.join(' — '));
+  };
+  extraRow.appendChild(extraInput);
+  extraRow.appendChild(submitBtn);
+  clarifyOptionsEl.appendChild(extraRow);
+}
+
+/* ---------- Trạng thái "đang xử lý" cho nút bấm — LLM/BigQuery có thể mất vài
+   giây tới vài chục giây, phải rõ ràng là đang chạy, tránh user tưởng bị treo. ---------- */
+function setButtonBusy(btn, busyText) {
+  if (btn.dataset.originalText === undefined) btn.dataset.originalText = btn.textContent;
+  btn.disabled = true;
+  btn.classList.add('is-busy');
+  btn.textContent = busyText;
+}
+function clearButtonBusy(btn) {
+  btn.disabled = false;
+  btn.classList.remove('is-busy');
+  if (btn.dataset.originalText !== undefined) btn.textContent = btn.dataset.originalText;
+}
+
+document.getElementById('approve-btn').onclick = async () => {
+  const dashboardId = document.getElementById('dashboard-id-input').value.trim();
+  if (!dashboardId) { alert('Nhập dashboard_id trước'); return; }
+  const btn = document.getElementById('approve-btn');
+  setButtonBusy(btn, '⏳ Đang build dashboard, đợi chút...');
+  document.getElementById('dashboard-id-input').disabled = true;
+  try {
+    const resp = await apiFetch('/api/blueprint/approve', {
+      method: 'POST',
+      body: JSON.stringify({session_id: sessionId, dashboard_id: dashboardId}),
+    });
+    currentDashboardId = resp.dashboard_id;
+    currentStartDate = resp.default_start_date;
+    currentEndDate = resp.default_end_date;
+    renderDashboard(pendingBlueprint, resp.results);
+    approveRowEl.hidden = true;
+    addMessage('system', `Đã build xong dashboard "${dashboardId}".`);
+  } catch (e) {
+    addMessage('refuse', 'Build lỗi: ' + e.message);
+  } finally {
+    clearButtonBusy(btn);
+    document.getElementById('dashboard-id-input').disabled = false;
+  }
+};
+
+refreshBtnEl.onclick = async () => {
+  if (!currentDashboardId) return;
+  setButtonBusy(refreshBtnEl, '⏳ Đang tải...');
+  try {
+    const resp = await apiFetch(`/api/dashboard/${currentDashboardId}/refresh`, {method: 'POST'});
+    renderDashboard(pendingBlueprint, resp.results);
+  } catch (e) {
+    addMessage('refuse', 'Refresh lỗi: ' + e.message);
+  } finally {
+    clearButtonBusy(refreshBtnEl);
+  }
+};
+
+/* ---------- Bộ lọc ngày sống — chạy lại đúng SQL đã duyệt, không gọi LLM ---------- */
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+function isoMinusDays(days) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+function syncActivePreset() {
+  const days = Math.round((new Date(currentEndDate) - new Date(currentStartDate)) / 86400000) + 1;
+  document.querySelectorAll('.date-preset-btn').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.days) === days);
+  });
+}
+
+async function applyDateFilter(start, end) {
+  if (!currentDashboardId) return;
+  const applyBtn = document.getElementById('filter-apply-btn');
+  setButtonBusy(applyBtn, '...');
+  kpiGridEl.style.opacity = '0.5'; // giữ khung cũ mờ đi trong lúc chờ, không giật layout
+  try {
+    const resp = await apiFetch(`/api/dashboard/${currentDashboardId}/filter`, {
+      method: 'POST',
+      body: JSON.stringify({start_date: start, end_date: end}),
+    });
+    currentStartDate = start;
+    currentEndDate = end;
+    renderDashboard(pendingBlueprint, resp.results);
+  } catch (e) {
+    addMessage('refuse', 'Lọc ngày lỗi: ' + e.message);
+  } finally {
+    clearButtonBusy(applyBtn);
+    kpiGridEl.style.opacity = '1';
+  }
+}
+
+document.querySelectorAll('.date-preset-btn').forEach(btn => {
+  btn.onclick = () => {
+    const days = Number(btn.dataset.days);
+    applyDateFilter(isoMinusDays(days - 1), todayISO());
+  };
+});
+document.getElementById('filter-apply-btn').onclick = () => {
+  const start = document.getElementById('filter-start').value;
+  const end = document.getElementById('filter-end').value;
+  if (!start || !end) { alert('Chọn đủ ngày bắt đầu và kết thúc.'); return; }
+  if (start > end) { alert('Ngày bắt đầu phải trước ngày kết thúc.'); return; }
+  applyDateFilter(start, end);
+};
+
+/* ============================== Rendering ==============================
+Phần vẽ thật nằm ở /renderer.js (dùng chung với preview harness). Ở đây chỉ còn
+phần vỏ app: tiêu đề, khoảng ngày đang áp dụng, bộ lọc. */
+
+function renderDashboard(blueprint, results) {
+  emptyStateEl.hidden = true;
+  dashboardHeaderEl.hidden = false;
+  document.getElementById('dashboard-title').textContent = blueprint ? blueprint.title : currentDashboardId;
+  document.getElementById('dashboard-desc').textContent = blueprint ? blueprint.description : '';
+  renderAppliedRange();
+
+  if (currentStartDate && currentEndDate) {
+    filterRowEl.hidden = false;
+    document.getElementById('filter-start').value = currentStartDate;
+    document.getElementById('filter-end').value = currentEndDate;
+    syncActivePreset();
+  }
+
+  DashboardRenderer.renderKpiGrid(kpiGridEl, blueprint, results);
+}
+
+/* blueprint.title bake cứng câu "30 ngày gần nhất" từ lúc build, nhưng bộ lọc ngày
+   đổi được sau đó — phải hiện khoảng ngày THẬT đang áp dụng, nếu không dashboard nói
+   một đằng mà số liệu một nẻo (đúng lỗi đang có: title ghi 30 ngày, filter đang 14). */
+function renderAppliedRange() {
+  const el = document.getElementById('dashboard-range');
+  if (!currentStartDate || !currentEndDate) { el.textContent = ''; return; }
+  const vn = (s) => s.split('-').reverse().join('/');
+  const days = Math.round((new Date(currentEndDate) - new Date(currentStartDate)) / 86400000) + 1;
+  el.textContent = `Dữ liệu đang xem: ${vn(currentStartDate)} → ${vn(currentEndDate)} (${days} ngày)`;
+}
+
+
+addMessage('planner', 'Chào bạn! Mô tả dashboard bạn muốn tạo, mình sẽ hỏi làm rõ trước khi build.');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,2629 @@
+{
+ "blueprint": {
+  "description": "Theo dõi tổng giá trị đơn hàng, lợi nhuận gộp và số lượng đơn hàng — chỉ tính trên các đơn đã giao thành công, tách riêng theo từng kênh bán, xem theo ngày trong 30 ngày gần nhất.",
+  "dimensions": [
+   "channel_key"
+  ],
+  "filters": [],
+  "granularity": "day",
+  "kpis": [
+   {
+    "chart_type": "line",
+    "definition": "SUM(gmv_success) theo brand × channel × ngày, chỉ tính đơn có order_status = trạng thái thành công.\n⚠️ Quy tắc normalize \"thành công\" theo TỪNG kênh (Shopee/TikTok/Retail POS...) hiện KHÔNG có trong Column Dictionary (Calculation/Logic trống). Cần lấy từ chủ sở hữu pipeline 09_logic_serving trước khi chuyển Status sang Active. Business definition: Tổng giá trị đơn hàng (GMV) chỉ tính trên các đơn có trạng thái THÀNH CÔNG (đã giao/hoàn tất), phản ánh doanh số thực nhận thay vì quy mô đơn phát sinh. Chưa trừ chiết khấu, phí sàn.",
+    "name": "GMV (Success)",
+    "status": "Draft"
+   },
+   {
+    "chart_type": "line",
+    "definition": "Custom (Planner tự tổng hợp, KHÔNG phải KPI chuẩn hoá trong kho): Lợi nhuận gộp = Net Revenue (Success) − COGS (Success). Trong đó: Net Revenue (Success) ≈ GMV (Success) − Discount (Success) [Draft, business definition: Doanh thu thuần chỉ tính trên đơn THÀNH CÔNG]; COGS (Success) = SUM(cogs_success) theo brand × channel × ngày, chỉ tính đơn thành công [Draft, cách tính giá vốn gốc chưa xác nhận với chủ sở hữu pipeline]. Cả 2 thành phần đều đang ở dạng công thức nháp chưa được xác nhận chính thức.",
+    "name": "Lợi nhuận gộp",
+    "status": "custom"
+   },
+   {
+    "chart_type": "bar",
+    "definition": "Custom (Planner tự tổng hợp từ cột thô, không phải KPI chuẩn hoá trong kho): SUM(count_order_success) theo brand × channel × ngày.",
+    "name": "Số lượng đơn hàng thành công",
+    "status": "custom"
+   }
+  ],
+  "refresh_policy": "manual",
+  "sources": [
+   "surya-495408.00_serving_sales.vw_business_daily"
+  ],
+  "time_range": "30 ngày gần nhất",
+  "title": "Tình hình kinh doanh - 30 ngày gần nhất"
+ },
+ "results": [
+  {
+   "kpi_name": "GMV (Success)",
+   "x_field": "date",
+   "y_field": "gmv_success",
+   "series_field": "channel_key",
+   "rows": [
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-22",
+     "gmv_success": 833000.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-22",
+     "gmv_success": 35610540.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-22",
+     "gmv_success": 8801370.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-22",
+     "gmv_success": 28738710.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-22",
+     "gmv_success": 1354137671.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-22",
+     "gmv_success": 188791310.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-22",
+     "gmv_success": 25967600.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-22",
+     "gmv_success": 1009800.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-22",
+     "gmv_success": 1882000.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-22",
+     "gmv_success": 340980950.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-22",
+     "gmv_success": 912509886.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-22",
+     "gmv_success": 4710000.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-23",
+     "gmv_success": 11577950.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-23",
+     "gmv_success": 625066534.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-23",
+     "gmv_success": 243277218.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-23",
+     "gmv_success": 1666000.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-23",
+     "gmv_success": 1096928359.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-23",
+     "gmv_success": 861000.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-23",
+     "gmv_success": 354686150.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-23",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-23",
+     "gmv_success": 10973750.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-23",
+     "gmv_success": 273200.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-23",
+     "gmv_success": 3258820.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-23",
+     "gmv_success": 1761020.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-24",
+     "gmv_success": 255076700.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-24",
+     "gmv_success": 3761280.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-24",
+     "gmv_success": 1218706324.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-24",
+     "gmv_success": 877139614.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-24",
+     "gmv_success": 21988800.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-24",
+     "gmv_success": 16217606.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-24",
+     "gmv_success": 42096726.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-24",
+     "gmv_success": 2904380.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-24",
+     "gmv_success": 45676620.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-24",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-24",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-24",
+     "gmv_success": 251047780.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-24",
+     "gmv_success": 2483000.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-25",
+     "gmv_success": 55969684.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-25",
+     "gmv_success": 15780403.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-25",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-25",
+     "gmv_success": 6675000.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-25",
+     "gmv_success": 954859202.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-25",
+     "gmv_success": 15101858.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-25",
+     "gmv_success": 291599300.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-25",
+     "gmv_success": 1477384361.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-25",
+     "gmv_success": 323514894.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-25",
+     "gmv_success": 900000.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-25",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-25",
+     "gmv_success": 2628190.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-25",
+     "gmv_success": 36759853.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-26",
+     "gmv_success": 213592888.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-26",
+     "gmv_success": 45675108.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-26",
+     "gmv_success": 9829483.0
+    },
+    {
+     "channel_key": "Mate Made Offline Store",
+     "date": "2026-08-26",
+     "gmv_success": 0.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-26",
+     "gmv_success": 1495290618.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-26",
+     "gmv_success": 3187550.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-26",
+     "gmv_success": 21550829.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-26",
+     "gmv_success": 1669800.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-26",
+     "gmv_success": 252221550.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-26",
+     "gmv_success": 821190.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-26",
+     "gmv_success": 2498000.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-26",
+     "gmv_success": 2101770696.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-26",
+     "gmv_success": 26942021.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-26",
+     "gmv_success": 852000.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-27",
+     "gmv_success": 20709115.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-27",
+     "gmv_success": 269138750.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-27",
+     "gmv_success": 17323203.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-27",
+     "gmv_success": 1262872941.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-27",
+     "gmv_success": 21330516.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-27",
+     "gmv_success": 1722218997.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-27",
+     "gmv_success": 265752312.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-27",
+     "gmv_success": 930000.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-27",
+     "gmv_success": 50301164.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-27",
+     "gmv_success": 7761990.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-27",
+     "gmv_success": 4463000.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-28",
+     "gmv_success": 45859973.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-28",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-28",
+     "gmv_success": 24709337.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-28",
+     "gmv_success": 398526155.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-28",
+     "gmv_success": 3099690.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-28",
+     "gmv_success": 4782000.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-28",
+     "gmv_success": 21417340.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-28",
+     "gmv_success": 2058905852.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-28",
+     "gmv_success": 1510720.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-28",
+     "gmv_success": 5998800.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-28",
+     "gmv_success": 226782681.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-28",
+     "gmv_success": 40165202.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-28",
+     "gmv_success": 1288537963.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-29",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-29",
+     "gmv_success": 2490500.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-29",
+     "gmv_success": 200052077.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-29",
+     "gmv_success": 1414452920.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-29",
+     "gmv_success": 1283000.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-29",
+     "gmv_success": 497493150.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-29",
+     "gmv_success": 2815910.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-29",
+     "gmv_success": 14252000.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-29",
+     "gmv_success": 998359464.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-29",
+     "gmv_success": 21620183.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-29",
+     "gmv_success": 42312128.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-29",
+     "gmv_success": 22114693.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-29",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-30",
+     "gmv_success": 1683000.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-30",
+     "gmv_success": 1697000.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-30",
+     "gmv_success": 1111589.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-30",
+     "gmv_success": 6431600.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-30",
+     "gmv_success": 717810785.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-30",
+     "gmv_success": 3640105.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-30",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-30",
+     "gmv_success": 1182514573.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-30",
+     "gmv_success": 480351658.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-30",
+     "gmv_success": 2666000.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-30",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-30",
+     "gmv_success": 1807500.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-30",
+     "gmv_success": 65124338.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-31",
+     "gmv_success": 35258658.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-31",
+     "gmv_success": 428699242.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-31",
+     "gmv_success": 36941050.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-31",
+     "gmv_success": 25112712.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-31",
+     "gmv_success": 9823400.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-31",
+     "gmv_success": 8251010.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-31",
+     "gmv_success": 1090550.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-31",
+     "gmv_success": 367637287.0
+    },
+    {
+     "channel_key": "Mate Made Offline Store",
+     "date": "2026-08-31",
+     "gmv_success": 0.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-31",
+     "gmv_success": 904163987.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-31",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-31",
+     "gmv_success": 457298450.0
+    },
+    {
+     "channel_key": "Shopify",
+     "date": "2026-08-31",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-31",
+     "gmv_success": 4051770.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-01",
+     "gmv_success": 2980650.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-01",
+     "gmv_success": 5840580.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-01",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-09-01",
+     "gmv_success": 513000.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-01",
+     "gmv_success": 732343433.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-01",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-01",
+     "gmv_success": 516382750.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-01",
+     "gmv_success": 1139675933.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-01",
+     "gmv_success": 589800.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-01",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-01",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-01",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-02",
+     "gmv_success": 306475930.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-02",
+     "gmv_success": 538254250.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-02",
+     "gmv_success": 4886050.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-02",
+     "gmv_success": 1073032918.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-02",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-03",
+     "gmv_success": 350546171.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-03",
+     "gmv_success": 5066730.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-03",
+     "gmv_success": 22774384.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-03",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-09-03",
+     "gmv_success": 3910800.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-03",
+     "gmv_success": 9554991.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-03",
+     "gmv_success": 1043460134.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-03",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "",
+     "date": "2026-09-03",
+     "gmv_success": null
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-03",
+     "gmv_success": 248751719.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-03",
+     "gmv_success": 968100.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-03",
+     "gmv_success": 1025210046.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-03",
+     "gmv_success": 23656385.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-04",
+     "gmv_success": 1286190.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-04",
+     "gmv_success": 2500565.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-04",
+     "gmv_success": 2190050.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-04",
+     "gmv_success": 31786703.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-04",
+     "gmv_success": 26959035.0
+    }
+   ]
+  },
+  {
+   "kpi_name": "Lợi nhuận gộp",
+   "x_field": "date",
+   "y_field": "gross_profit",
+   "series_field": "channel_key",
+   "rows": [
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-22",
+     "gross_profit": 773517094.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-22",
+     "gross_profit": 12992971.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-22",
+     "gross_profit": 418070.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-22",
+     "gross_profit": 447612.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-22",
+     "gross_profit": 2677824.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-22",
+     "gross_profit": 17387409.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-22",
+     "gross_profit": 515629848.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-22",
+     "gross_profit": 197813316.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-22",
+     "gross_profit": 5166726.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-22",
+     "gross_profit": 14864410.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-22",
+     "gross_profit": 1103617.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-22",
+     "gross_profit": 107263790.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-23",
+     "gross_profit": 476840.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-23",
+     "gross_profit": 1035701.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-23",
+     "gross_profit": 72391.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-23",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-23",
+     "gross_profit": 136804681.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-23",
+     "gross_profit": 1786562.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-23",
+     "gross_profit": 4546260.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-23",
+     "gross_profit": 633467110.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-23",
+     "gross_profit": 794696.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-23",
+     "gross_profit": 206772278.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-23",
+     "gross_profit": 6573150.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-23",
+     "gross_profit": 356149803.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-24",
+     "gross_profit": 2264295.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-24",
+     "gross_profit": 498945739.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-24",
+     "gross_profit": 1519124.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-24",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-24",
+     "gross_profit": 12830501.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-24",
+     "gross_profit": 147545632.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-24",
+     "gross_profit": 22271948.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-24",
+     "gross_profit": 707134364.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-24",
+     "gross_profit": 147208547.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-24",
+     "gross_profit": 1765296.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-24",
+     "gross_profit": 23472360.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-24",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-24",
+     "gross_profit": 2268824.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-25",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-25",
+     "gross_profit": 4032311.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-25",
+     "gross_profit": 4470203.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-25",
+     "gross_profit": 581946.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-25",
+     "gross_profit": 25144609.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-25",
+     "gross_profit": 1375088.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-25",
+     "gross_profit": 551768956.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-25",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-25",
+     "gross_profit": 19357699.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-25",
+     "gross_profit": 167353696.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-25",
+     "gross_profit": 8365770.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-25",
+     "gross_profit": 185072392.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-25",
+     "gross_profit": 854062542.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-26",
+     "gross_profit": 25552089.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-26",
+     "gross_profit": 574948.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-26",
+     "gross_profit": 854226103.0
+    },
+    {
+     "channel_key": "Mate Made Offline Store",
+     "date": "2026-08-26",
+     "gross_profit": 3814.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-26",
+     "gross_profit": 1181216689.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-26",
+     "gross_profit": 5293884.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-26",
+     "gross_profit": 11027265.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-26",
+     "gross_profit": 564376.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-26",
+     "gross_profit": 735689.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-26",
+     "gross_profit": 978474.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-26",
+     "gross_profit": 143169521.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-26",
+     "gross_profit": 13422743.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-26",
+     "gross_profit": 1858269.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-26",
+     "gross_profit": 124814396.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-27",
+     "gross_profit": 5621575.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-27",
+     "gross_profit": 10602427.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-27",
+     "gross_profit": 593964.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-27",
+     "gross_profit": 2588836.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-27",
+     "gross_profit": 151504340.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-27",
+     "gross_profit": 4359920.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-27",
+     "gross_profit": 24229343.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-27",
+     "gross_profit": 986134245.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-27",
+     "gross_profit": 11425814.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-27",
+     "gross_profit": 150146897.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-27",
+     "gross_profit": 718218010.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-28",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-28",
+     "gross_profit": 221850574.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-28",
+     "gross_profit": 3008234.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-28",
+     "gross_profit": 1934494.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-28",
+     "gross_profit": 10204890.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-28",
+     "gross_profit": 132226815.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-28",
+     "gross_profit": 874664.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-28",
+     "gross_profit": 20663165.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-28",
+     "gross_profit": 12421184.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-28",
+     "gross_profit": 14756165.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-28",
+     "gross_profit": 2013935.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-28",
+     "gross_profit": 689054293.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-28",
+     "gross_profit": 1021799759.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-29",
+     "gross_profit": 551803801.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-29",
+     "gross_profit": 20458875.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-29",
+     "gross_profit": 1709670.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-29",
+     "gross_profit": 11766002.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-29",
+     "gross_profit": 11984576.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-29",
+     "gross_profit": 270992925.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-29",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-29",
+     "gross_profit": 5461992.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-29",
+     "gross_profit": 1176423.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-29",
+     "gross_profit": 777675.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-29",
+     "gross_profit": 753881824.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-29",
+     "gross_profit": 116528384.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-29",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-30",
+     "gross_profit": 396155423.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-30",
+     "gross_profit": 1537614.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-30",
+     "gross_profit": 632967.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-30",
+     "gross_profit": 724588.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-30",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-30",
+     "gross_profit": 335237.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-30",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-30",
+     "gross_profit": 2818063.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-30",
+     "gross_profit": 640912476.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-30",
+     "gross_profit": 37274060.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-30",
+     "gross_profit": 975356.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-30",
+     "gross_profit": 259067435.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-30",
+     "gross_profit": 1848234.0
+    },
+    {
+     "channel_key": "Mate Made Offline Store",
+     "date": "2026-08-31",
+     "gross_profit": 16220.0
+    },
+    {
+     "channel_key": "Shopify",
+     "date": "2026-08-31",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-31",
+     "gross_profit": 245760648.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-31",
+     "gross_profit": 2184590.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-31",
+     "gross_profit": 11509367.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-31",
+     "gross_profit": 4716373.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-31",
+     "gross_profit": 216516146.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-31",
+     "gross_profit": 20047925.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-31",
+     "gross_profit": 20994086.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-31",
+     "gross_profit": 251909857.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-31",
+     "gross_profit": 530528291.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-31",
+     "gross_profit": 589704.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-31",
+     "gross_profit": 3930158.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-31",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-01",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-01",
+     "gross_profit": 1514880.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-01",
+     "gross_profit": 287752955.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-01",
+     "gross_profit": 686516161.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-01",
+     "gross_profit": 260861.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-09-01",
+     "gross_profit": 318989.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-01",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-01",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-01",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-01",
+     "gross_profit": 423251403.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-01",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-01",
+     "gross_profit": 3628656.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-02",
+     "gross_profit": 193129842.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-02",
+     "gross_profit": 2273040.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-02",
+     "gross_profit": 655001579.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-02",
+     "gross_profit": 295326889.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-09-02",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-03",
+     "gross_profit": 146194520.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-09-03",
+     "gross_profit": 858061.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-03",
+     "gross_profit": 405353.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-03",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "",
+     "date": "2026-09-03",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-03",
+     "gross_profit": 12058164.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-03",
+     "gross_profit": 193824589.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-03",
+     "gross_profit": 13719897.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-03",
+     "gross_profit": 627007398.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-03",
+     "gross_profit": 3011329.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-03",
+     "gross_profit": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-03",
+     "gross_profit": 592598323.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-03",
+     "gross_profit": 5059407.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-04",
+     "gross_profit": 15118120.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-04",
+     "gross_profit": 741253.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-04",
+     "gross_profit": 19400188.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-04",
+     "gross_profit": 1113250.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-04",
+     "gross_profit": 1596741.0
+    }
+   ]
+  },
+  {
+   "kpi_name": "Số lượng đơn hàng thành công",
+   "x_field": "date",
+   "y_field": "order_count",
+   "series_field": "channel_key",
+   "rows": [
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-22",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-22",
+     "order_count": 296.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-22",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-22",
+     "order_count": 57.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-22",
+     "order_count": 157.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-22",
+     "order_count": 1044.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-22",
+     "order_count": 39.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-22",
+     "order_count": 8.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-22",
+     "order_count": 16.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-22",
+     "order_count": 1441.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-22",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-22",
+     "order_count": 4.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-23",
+     "order_count": 326.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-23",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-23",
+     "order_count": 3.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-23",
+     "order_count": 732.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-23",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-23",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-23",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-23",
+     "order_count": 1171.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-23",
+     "order_count": null
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-23",
+     "order_count": 218.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-23",
+     "order_count": 10.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-23",
+     "order_count": 12.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-24",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-24",
+     "order_count": 4.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-24",
+     "order_count": 236.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-24",
+     "order_count": 74.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-24",
+     "order_count": 46.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-24",
+     "order_count": 1028.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-24",
+     "order_count": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-24",
+     "order_count": 3.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-24",
+     "order_count": 18.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-24",
+     "order_count": null
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-24",
+     "order_count": 32.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-24",
+     "order_count": 1279.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-24",
+     "order_count": 229.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-25",
+     "order_count": 63.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-25",
+     "order_count": 23.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-25",
+     "order_count": 16.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-25",
+     "order_count": 1630.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-25",
+     "order_count": null
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-25",
+     "order_count": null
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-25",
+     "order_count": 53.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-25",
+     "order_count": 5.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-25",
+     "order_count": 4.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-25",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-25",
+     "order_count": 1082.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-25",
+     "order_count": 269.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-25",
+     "order_count": 308.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-26",
+     "order_count": 208.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-26",
+     "order_count": 1646.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-26",
+     "order_count": 41.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-26",
+     "order_count": 54.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-26",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-26",
+     "order_count": 3.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-26",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Mate Made Offline Store",
+     "date": "2026-08-26",
+     "order_count": 0.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-26",
+     "order_count": 3.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-26",
+     "order_count": 222.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-26",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-26",
+     "order_count": 26.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-26",
+     "order_count": 10.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-26",
+     "order_count": 2665.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-27",
+     "order_count": 19.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-27",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-27",
+     "order_count": 38.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-27",
+     "order_count": 250.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-27",
+     "order_count": 37.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-27",
+     "order_count": 5.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-27",
+     "order_count": 1375.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-27",
+     "order_count": 248.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-27",
+     "order_count": 7.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-27",
+     "order_count": 1954.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-27",
+     "order_count": 41.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-28",
+     "order_count": 6.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-28",
+     "order_count": 4.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-28",
+     "order_count": 1543.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-28",
+     "order_count": 217.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-28",
+     "order_count": 6.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-28",
+     "order_count": 40.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-28",
+     "order_count": 387.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-28",
+     "order_count": 47.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-28",
+     "order_count": 25.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-28",
+     "order_count": 63.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-28",
+     "order_count": 2508.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-28",
+     "order_count": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-28",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-29",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-29",
+     "order_count": null
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-29",
+     "order_count": 22.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-29",
+     "order_count": 23.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-29",
+     "order_count": 22.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-29",
+     "order_count": 1694.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-29",
+     "order_count": 3.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-29",
+     "order_count": 518.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-29",
+     "order_count": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-29",
+     "order_count": 1171.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-29",
+     "order_count": 197.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-29",
+     "order_count": 42.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-29",
+     "order_count": 3.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-30",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-30",
+     "order_count": 488.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-30",
+     "order_count": 8.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-30",
+     "order_count": 6.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-08-30",
+     "order_count": null
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-30",
+     "order_count": 1347.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-30",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-30",
+     "order_count": 4.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-08-30",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-30",
+     "order_count": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-30",
+     "order_count": 844.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-30",
+     "order_count": 53.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-30",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Shopify",
+     "date": "2026-08-31",
+     "order_count": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-08-31",
+     "order_count": 501.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-08-31",
+     "order_count": 341.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-08-31",
+     "order_count": 464.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-08-31",
+     "order_count": 36.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-08-31",
+     "order_count": 28.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-08-31",
+     "order_count": null
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-08-31",
+     "order_count": 944.0
+    },
+    {
+     "channel_key": "Mate Made Offline Store",
+     "date": "2026-08-31",
+     "order_count": 0.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-08-31",
+     "order_count": 3.0
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-08-31",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-08-31",
+     "order_count": 7.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-08-31",
+     "order_count": 63.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-08-31",
+     "order_count": 13.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-01",
+     "order_count": 4.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-01",
+     "order_count": 821.0
+    },
+    {
+     "channel_key": "Tiktok Trang sức",
+     "date": "2026-09-01",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-01",
+     "order_count": null
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-01",
+     "order_count": 504.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-01",
+     "order_count": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-01",
+     "order_count": null
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-01",
+     "order_count": 4.0
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-01",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-01",
+     "order_count": null
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-01",
+     "order_count": 1193.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-01",
+     "order_count": null
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-02",
+     "order_count": 4.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-02",
+     "order_count": 523.0
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-02",
+     "order_count": 1024.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-02",
+     "order_count": 241.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-02",
+     "order_count": null
+    },
+    {
+     "channel_key": "Admin",
+     "date": "2026-09-03",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "",
+     "date": "2026-09-03",
+     "order_count": null
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-03",
+     "order_count": 1072.0
+    },
+    {
+     "channel_key": "Instagram",
+     "date": "2026-09-03",
+     "order_count": 5.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-03",
+     "order_count": 263.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-03",
+     "order_count": 337.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-03",
+     "order_count": 41.0
+    },
+    {
+     "channel_key": "Website",
+     "date": "2026-09-03",
+     "order_count": null
+    },
+    {
+     "channel_key": "Zalo",
+     "date": "2026-09-03",
+     "order_count": 12.0
+    },
+    {
+     "channel_key": "ZALO FACEBOOK ",
+     "date": "2026-09-03",
+     "order_count": null
+    },
+    {
+     "channel_key": "Google",
+     "date": "2026-09-03",
+     "order_count": 25.0
+    },
+    {
+     "channel_key": "Koc Order",
+     "date": "2026-09-03",
+     "order_count": 5.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-03",
+     "order_count": 1121.0
+    },
+    {
+     "channel_key": "Shopee",
+     "date": "2026-09-04",
+     "order_count": 26.0
+    },
+    {
+     "channel_key": "Facebook",
+     "date": "2026-09-04",
+     "order_count": 1.0
+    },
+    {
+     "channel_key": "Platform Order",
+     "date": "2026-09-04",
+     "order_count": 3.0
+    },
+    {
+     "channel_key": "Retail",
+     "date": "2026-09-04",
+     "order_count": 2.0
+    },
+    {
+     "channel_key": "Tiktok Shop",
+     "date": "2026-09-04",
+     "order_count": 33.0
+    }
+   ]
+  }
+ ],
+ "default_start_date": "2026-08-22",
+ "default_end_date": "2026-09-04"
+}

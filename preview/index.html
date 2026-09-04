@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Preview renderer — trước / sau</title>
+
+<!-- CÙNG file CSS/JS mà app thật dùng: preview không được có bản copy riêng, nếu
+     không thì "đẹp trên preview, xấu trên app" -->
+<link rel="stylesheet" href="../app/web/theme.css" />
+<link rel="stylesheet" href="../app/web/dashboard.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="../app/web/renderer.js"></script>
+<script src="./renderer-baseline.js"></script>
+
+<style>
+  body { margin: 0; padding: 0 0 60px; background: var(--page); color: var(--ink-primary);
+         font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 10; padding: 12px 24px;
+           background: var(--surface); border-bottom: 1px solid var(--border);
+           display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  header h1 { font-size: 14px; font-weight: 650; margin: 0; }
+  header label { font-size: 12px; color: var(--ink-secondary); display: inline-flex;
+                 align-items: center; gap: 6px; }
+  header select, header button {
+    padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--page); color: var(--ink-primary); font-size: 12px; cursor: pointer;
+  }
+  #meta { font-size: 11.5px; color: var(--ink-muted); margin-left: auto; }
+
+  #panes { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: start; }
+  #panes.single { grid-template-columns: 1fr; }
+  .pane { padding: 20px 24px; min-width: 0; }
+  .pane + .pane { border-left: 1px solid var(--border); }
+  .pane > h2 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+               text-transform: uppercase; margin: 0 0 4px; }
+  .pane.before > h2 { color: var(--critical); }
+  .pane.after  > h2 { color: var(--good); }
+  .pane > p.sub { font-size: 11.5px; color: var(--ink-muted); margin: 0 0 16px; }
+  /* Không ép cột ở đây: .dash trong renderer.js dùng container query nên tự co
+     theo bề rộng pane, giống hệt app thật khi cửa sổ hẹp. */
+  /* Bản baseline gắn card thẳng vào container (không có .dash), tự dựng cột cho nó */
+  #grid-before { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  #err { padding: 24px; color: var(--critical); font-size: 13px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Preview renderer</h1>
+  <label>Fixture
+    <select id="fixture">
+      <option value="doanh_thu">doanh_thu — 3 KPI, 16 kênh × 14 ngày</option>
+      <option value="kinh_doanh_4kpi">kinh_doanh_4kpi — 4 KPI, có 1 KPI dạng số</option>
+      <option value="gmv_don_gian">gmv_don_gian — 1 số + 1 đường, không tách nhóm</option>
+      <option value="phase2_demo">phase2_demo — tile_agg / format / top_n / col_span</option>
+    </select>
+  </label>
+  <label>Giao diện
+    <select id="theme">
+      <option value="">theo hệ thống</option>
+      <option value="light">sáng</option>
+      <option value="dark">tối</option>
+    </select>
+  </label>
+  <label>Hiển thị
+    <select id="mode">
+      <option value="both">trước + sau</option>
+      <option value="after">chỉ sau</option>
+      <option value="before">chỉ trước</option>
+    </select>
+  </label>
+  <button id="reload">Vẽ lại</button>
+  <span id="meta"></span>
+</header>
+
+<div id="err" hidden></div>
+<div id="panes">
+  <section class="pane before" id="pane-before">
+    <h2>Trước — renderer-baseline.js</h2>
+    <p class="sub">Bản đóng băng đang chạy trên production. Không sửa file này.</p>
+    <div class="kpi-grid" id="grid-before"></div>
+  </section>
+  <section class="pane after" id="pane-after">
+    <h2>Sau — app/web/renderer.js</h2>
+    <p class="sub">File thật app đang dùng. Sửa renderer.js rồi bấm "Vẽ lại".</p>
+    <div class="kpi-grid" id="grid-after"></div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let fixture = null;
+
+async function loadFixture(name) {
+  const res = await fetch(`./fixtures/${name}.json?t=${Date.now()}`);
+  if (!res.ok) throw new Error(`Không đọc được fixtures/${name}.json (${res.status}).
+Chạy preview bằng http server từ thư mục gốc repo, không mở bằng file://:
+  python3 -m http.server 8765
+rồi mở http://localhost:8765/preview/`);
+  return res.json();
+}
+
+function draw() {
+  const mode = $('mode').value;
+  $('panes').classList.toggle('single', mode !== 'both');
+  $('pane-before').hidden = (mode === 'after');
+  $('pane-after').hidden  = (mode === 'before');
+
+  const { blueprint, results } = fixture;
+  if (!$('pane-before').hidden) {
+    DashboardRendererBaseline.renderKpiGrid($('grid-before'), blueprint, results);
+  }
+  if (!$('pane-after').hidden) {
+    DashboardRenderer.renderKpiGrid($('grid-after'), blueprint, results);
+  }
+
+  const nSeries = results.map(r => {
+    if (!r.series_field) return 1;
+    return new Set(r.rows.map(x => String(x[r.series_field]))).size;
+  });
+  $('meta').textContent =
+    `${fixture.default_start_date} → ${fixture.default_end_date} · ` +
+    `${results.length} KPI · ${results.reduce((a, r) => a + r.rows.length, 0)} dòng · ` +
+    `series/KPI: ${nSeries.join(', ')}`;
+}
+
+async function reload() {
+  try {
+    $('err').hidden = true;
+    fixture = await loadFixture($('fixture').value);
+    draw();
+  } catch (e) {
+    $('err').hidden = false;
+    $('err').textContent = e.message;
+  }
+}
+
+$('theme').onchange = (e) => {
+  if (e.target.value) document.documentElement.dataset.theme = e.target.value;
+  else delete document.documentElement.dataset.theme;
+  draw();  // vẽ lại vì màu chart đọc từ CSS var lúc khởi tạo Chart.js
+};
+$('mode').onchange = draw;
+$('fixture').onchange = reload;
+$('reload').onclick = () => location.reload();
+
+// Cho phép chốt sẵn trạng thái qua URL (?mode=after&theme=dark) — tiện khi chụp ảnh
+// so sánh bằng headless Chrome hoặc gửi link cho người khác xem đúng cái mình thấy.
+(function applyUrlState() {
+  const q = new URLSearchParams(location.search);
+  const mode = q.get('mode'), theme = q.get('theme'), fx = q.get('fx');
+  if (mode && ['both', 'after', 'before'].includes(mode)) $('mode').value = mode;
+  if (fx && Array.from($('fixture').options).some(o => o.value === fx)) $('fixture').value = fx;
+  if (theme && ['light', 'dark'].includes(theme)) {
+    $('theme').value = theme;
+    document.documentElement.dataset.theme = theme;
+  }
+})();
+
+reload();
+</script>
+</body>
+</html>
