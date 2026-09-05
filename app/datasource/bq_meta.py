@@ -139,43 +139,41 @@ def enrich_from_lark(tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
     lark_by_table_id = {t["table_id"]: t for t in catalog.get("tables", [])}
     enriched = []
     for t in tables:
-        lark = lark_by_table_id.get(t["table_id"])
+        has_lark = t["table_id"] in lark_by_table_id
+        lark = lark_by_table_id.get(t["table_id"]) or {}
         merged = dict(t)
-        merged["purpose"] = lark.get("purpose", "") if lark else ""
-        merged["grain"] = lark.get("grain", "") if lark else ""
-        merged["refresh"] = lark.get("refresh", "") if lark else ""
-        merged["domain"] = lark.get("domain", "") if lark else ""
-        pii_note = lark.get("pii_note", "") if lark else ""
+        merged["purpose"] = lark.get("purpose", "")
+        merged["grain"] = lark.get("grain", "")
+        merged["refresh"] = lark.get("refresh", "")
+        merged["domain"] = lark.get("domain", "")
+        pii_note = lark.get("pii_note", "")
         merged["pii_note"] = pii_note
         merged["has_pii"] = bool(pii_note) and pii_note.strip().lower() not in ("không", "no", "none", "")
-        merged["kpi_names"] = lark.get("kpi_names", []) if lark else []
-        merged["has_lark_description"] = lark is not None
+        merged["kpi_names"] = lark.get("kpi_names", [])
+        merged["has_lark_description"] = has_lark
 
         # Không có partition column thật từ BigQuery (thường là VIEW) -> thử dùng
         # field 'partition' của Lark, nhưng PHẢI validate khớp 1 cột thật của bảng
         # này — không tin chữ tự do trong Lark có thể lỗi thời/gõ sai.
         real_col_names = {c["name"] for c in merged.get("columns", [])}
-        if not merged.get("partition_column") and lark:
-            lark_partition = (lark.get("partition") or "").strip()
-            if lark_partition in real_col_names:
-                merged["partition_column"] = lark_partition
+        lark_partition = lark.get("partition", "").strip()
+        if not merged.get("partition_column") and lark_partition in real_col_names:
+            merged["partition_column"] = lark_partition
 
         # Mô tả cấp cột từ Column Dictionary, khớp theo tên cột trong CHÍNH bảng
         # Lark (không phải toàn catalog) — tránh khớp nhầm cột trùng tên ở bảng khác.
-        lark_cols_by_name = {c["name"]: c for c in (lark.get("columns", []) if lark else [])}
+        # calculation_logic/example cũng có trong Column Dictionary nhưng chưa có
+        # nơi nào đọc tới (không hiện ở API/UI) nên không thread qua đây — cần thì
+        # thêm lại 2 dòng, dữ liệu gốc vẫn còn nguyên trong catalog Lark.
+        lark_cols_by_name = {c["name"]: c for c in lark.get("columns", [])}
         new_columns = []
         for col in merged.get("columns", []):
             col = dict(col)
             lark_col = lark_cols_by_name.get(col["name"])
-            if lark_col:
-                col["friendly_name"] = lark_col.get("friendly_name", "")
-                # Business Definition (nếu có) đáng tin hơn description rỗng của BigQuery.
-                if lark_col.get("description"):
-                    col["description"] = lark_col["description"]
-                col["calculation_logic"] = lark_col.get("calculation_logic", "")
-                col["example"] = lark_col.get("example", "")
-            else:
-                col.setdefault("friendly_name", "")
+            col["friendly_name"] = lark_col.get("friendly_name", "") if lark_col else ""
+            # Business Definition (nếu có) đáng tin hơn description rỗng của BigQuery.
+            if lark_col and lark_col.get("description"):
+                col["description"] = lark_col["description"]
             col["sentinel_values"] = _parse_sentinel_notes(col.get("description", ""))
             new_columns.append(col)
         merged["columns"] = new_columns

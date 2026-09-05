@@ -22,7 +22,6 @@
   .msg.user { background: var(--user-bubble); align-self: flex-end; border-bottom-right-radius: 3px; }
   .msg.advisor { background: var(--surface-2); align-self: flex-start; border-bottom-left-radius: 3px; }
   .msg.refuse { background: var(--surface-2); border: 1px solid var(--critical); align-self: flex-start; border-bottom-left-radius: 3px; }
-  .msg.system { background: transparent; color: var(--ink-muted); font-size: 12px; align-self: center; font-style: italic; }
 
   .unsuitable-card { align-self: flex-start; max-width: 92%; font-size: 12px; color: var(--ink-muted); padding: 2px 4px; }
 
@@ -91,10 +90,6 @@
     display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
     background: var(--warning-bg); color: var(--warning-ink); margin-left: 8px;
   }
-  .draft-badge {
-    display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
-    background: var(--warning-bg); color: var(--warning-ink);
-  }
 
   /* ---------- Table detail ---------- */
   #back-btn {
@@ -159,7 +154,6 @@
   }
   .grain-callout-value { font-size: 13.5px; font-weight: 600; line-height: 1.45; }
 
-  .friendly-name { font-size: 11.5px; color: var(--ink-secondary); margin-top: 2px; }
   .sentinel-note {
     display: inline-block; font-size: 11px; color: var(--warning-ink); background: var(--warning-bg);
     border-radius: 6px; padding: 1px 7px; margin-top: 4px;
@@ -295,6 +289,14 @@ function clearButtonBusy(btn) {
   if (btn.dataset.originalText !== undefined) btn.textContent = btn.dataset.originalText;
 }
 
+function showEmptyState(container, message) {
+  container.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'empty-state';
+  p.textContent = message;
+  container.appendChild(p);
+}
+
 const messagesEl = document.getElementById('messages');
 
 function addMessage(role, text) {
@@ -346,14 +348,14 @@ async function sendText(text) {
     advisorSessionId = resp.session_id;
     addMessage(resp.action === 'not_available' ? 'refuse' : 'advisor', resp.message_to_user);
 
-    if (resp.action === 'recommend') {
-      applyAdvisorFilter(resp);
-      resp.unsuitable.forEach(u => addUnsuitableNote(u));
-    } else if (resp.action === 'not_available') {
-      applyAdvisorFilter(resp);
-      resp.unsuitable.forEach(u => addUnsuitableNote(u));
-    } else if (resp.action === 'clarify') {
+    if (resp.action === 'clarify') {
       renderClarifyingOptions(resp.clarifying_options);
+    } else {
+      // 'recommend' và 'not_available' cùng lọc lại danh sách bảng bên phải —
+      // applyAdvisorFilter() tự quyết định lọc theo gợi ý hay lọc rỗng (xem
+      // định nghĩa hàm bên dưới, đây là nơi DUY NHẤT phân biệt 2 action này).
+      applyAdvisorFilter(resp);
+      resp.unsuitable.forEach(u => addUnsuitableNote(u));
     }
   } catch (e) {
     addMessage('refuse', 'Lỗi: ' + e.message);
@@ -463,11 +465,7 @@ async function loadTables() {
     allTables = resp.tables;
     renderTableGroups(allTables);
   } catch (e) {
-    tableGroupsEl.innerHTML = '';
-    const p = document.createElement('p');
-    p.className = 'empty-state';
-    p.textContent = 'Lỗi tải danh sách bảng: ' + e.message;
-    tableGroupsEl.appendChild(p);
+    showEmptyState(tableGroupsEl, 'Lỗi tải danh sách bảng: ' + e.message);
   }
 }
 
@@ -483,14 +481,11 @@ function fmtSize(bytes) {
 }
 
 function renderTableGroups(tables) {
-  tableGroupsEl.innerHTML = '';
   if (tables.length === 0) {
-    const p = document.createElement('p');
-    p.className = 'empty-state';
-    p.textContent = 'Không tìm thấy bảng nào khớp.';
-    tableGroupsEl.appendChild(p);
+    showEmptyState(tableGroupsEl, 'Không tìm thấy bảng nào khớp.');
     return;
   }
+  tableGroupsEl.innerHTML = '';
 
   const byDataset = {};
   tables.forEach(t => { (byDataset[t.dataset] = byDataset[t.dataset] || []).push(t); });
@@ -614,11 +609,7 @@ async function openTableDetail(tableId) {
     const table = await apiFetch(`/api/tables/${encodeURIComponent(tableId)}`);
     renderTableDetail(table);
   } catch (e) {
-    detailBodyEl.innerHTML = '';
-    const p = document.createElement('p');
-    p.className = 'empty-state';
-    p.textContent = 'Lỗi tải chi tiết bảng: ' + e.message;
-    detailBodyEl.appendChild(p);
+    showEmptyState(detailBodyEl, 'Lỗi tải chi tiết bảng: ' + e.message);
   }
 }
 
@@ -746,11 +737,7 @@ async function loadPreview(tableId, btn) {
     const resp = await apiFetch(`/api/tables/${encodeURIComponent(tableId)}/preview?limit=20`);
     renderPreview(container, resp);
   } catch (e) {
-    container.innerHTML = '';
-    const p = document.createElement('p');
-    p.className = 'empty-state';
-    p.textContent = 'Lỗi xem dữ liệu: ' + e.message;
-    container.appendChild(p);
+    showEmptyState(container, 'Lỗi xem dữ liệu: ' + e.message);
   } finally {
     clearButtonBusy(btn);
   }

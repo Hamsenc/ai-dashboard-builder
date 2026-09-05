@@ -1,5 +1,6 @@
-"""Thực thi SQL lên BigQuery cho đường xem trước dữ liệu của VIEW (datasource/
-preview.py) — BASE TABLE dùng tabledata.list, không qua module này.
+"""Thực thi SQL lên BigQuery cho đường xem trước dữ liệu (datasource/preview.py) —
+mọi bảng (BASE TABLE lẫn VIEW) đều qua đây vì preview cần ORDER BY (ưu tiên dòng
+mới nhất/ít NULL nhất), thứ tabledata.list không hỗ trợ.
 
 Luôn dry-run trước để biết số byte sẽ quét (chặn sớm nếu vượt ngưỡng cấu hình), rồi
 mới chạy thật với maximum_bytes_billed làm giới hạn cứng do chính BigQuery enforce —

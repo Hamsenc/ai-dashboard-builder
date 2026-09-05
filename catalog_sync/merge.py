@@ -151,12 +151,22 @@ def attach_column_dictionary(
     xem attach_columns) — khớp theo tên cột. Cột trong Column Dictionary nhưng
     KHÔNG khớp tên cột thật nào của bảng đó (tài liệu cũ/gõ sai) bị bỏ qua, không
     tự thêm cột lạ vào catalog."""
+    # Index cột theo tên 1 lần cho mỗi bảng (dict tra O(1)) thay vì quét tuyến
+    # tính entry.columns cho từng dòng Column Dictionary — build lười, chỉ build
+    # cho bảng nào thực sự có dòng Column Dictionary trỏ tới.
+    cols_by_name_cache: dict[str, dict[str, dict[str, Any]]] = {}
+
+    def cols_by_name(rid: str) -> dict[str, dict[str, Any]]:
+        if rid not in cols_by_name_cache:
+            entry = tables_by_record_id.get(rid)
+            cols_by_name_cache[rid] = {c["name"]: c for c in entry.columns} if entry else {}
+        return cols_by_name_cache[rid]
+
     for rec in column_dict_records:
         f = rec["fields"]
         col_name = field_text(f.get(COLDICT_FIELD_COL_NAME))
         if not col_name:
             continue
-        linked_ids = linked_record_ids(f.get(COLDICT_FIELD_TABLE_ID_LINK))
         info = {
             "friendly_name": field_text(f.get(COLDICT_FIELD_FRIENDLY_NAME)),
             "description": field_text(f.get(COLDICT_FIELD_BUSINESS_DEF)),
@@ -164,13 +174,10 @@ def attach_column_dictionary(
             "example": field_text(f.get(COLDICT_FIELD_EXAMPLE)),
             "dictionary_status": field_text(f.get(COLDICT_FIELD_STATUS)),
         }
-        for rid in linked_ids:
-            entry = tables_by_record_id.get(rid)
-            if not entry:
-                continue
-            for col in entry.columns:
-                if col["name"] == col_name:
-                    col.update(info)
+        for rid in linked_record_ids(f.get(COLDICT_FIELD_TABLE_ID_LINK)):
+            col = cols_by_name(rid).get(col_name)
+            if col:
+                col.update(info)
 
 
 def parse_and_link_kpis(

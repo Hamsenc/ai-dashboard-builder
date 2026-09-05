@@ -21,9 +21,9 @@ class Config:
         ).split(",")
         if d.strip()
     ]
-    # Preview dùng tabledata.list (không tốn quota) cho BASE TABLE; VIEW phải chạy
-    # SELECT * LIMIT qua execution.bq_client.execute(), giới hạn bytes riêng cho
-    # đường này (nhỏ hơn hẳn BQ_MAX_BYTES_BILLED vì chỉ cần vài chục dòng).
+    # Preview luôn chạy qua execution.bq_client.execute() (ORDER BY ưu tiên dòng
+    # mới nhất/ít NULL nhất — xem datasource/preview.py), giới hạn bytes riêng nhỏ
+    # hơn hẳn BQ_MAX_BYTES_BILLED vì chỉ cần vài chục dòng.
     PREVIEW_ROW_LIMIT = int(os.environ.get("PREVIEW_ROW_LIMIT", "20"))
     PREVIEW_MAX_BYTES = int(os.environ.get("PREVIEW_MAX_BYTES", str(200 * 1024 * 1024)))
 

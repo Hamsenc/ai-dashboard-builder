@@ -1,7 +1,13 @@
 """API duyệt bảng + xem trước dữ liệu — thay cho luồng dashboard builder cũ
 (blueprint/build/render). Không sinh SQL, không tính KPI, chỉ chiếu metadata +
 vài chục dòng dữ liệu thật để user tự hiểu dữ liệu công ty đang có trước khi tự
-đi dựng báo cáo ở nơi khác."""
+đi dựng báo cáo ở nơi khác.
+
+3 route bên dưới khai báo `def` thường (KHÔNG `async def`): thân hàm chỉ toàn
+lời gọi BigQuery/bq_store đồng bộ, không có `await` nào — để `async def` sẽ chạy
+thẳng trên event loop và ĐÓNG BĂNG toàn bộ server (mọi request khác) trong lúc
+chờ BigQuery trả lời vài giây. FastAPI/Starlette tự đưa route `def` thường vào
+thread pool riêng, đúng cơ chế dành cho code I/O đồng bộ như thế này."""
 
 from __future__ import annotations
 
@@ -14,20 +20,28 @@ from storage import bq_store
 
 router = APIRouter(prefix="/api/tables")
 
+# 1 client dùng chung cho cả process — bigquery.Client thread-safe (an toàn để
+# nhiều thread pool worker dùng chung), tạo mới mỗi request tốn thêm 1 vòng
+# discovery credentials/project vô ích.
+_client: bigquery.Client | None = None
+
 
 def get_bq_client() -> bigquery.Client:
-    return bigquery.Client()
+    global _client
+    if _client is None:
+        _client = bigquery.Client()
+    return _client
 
 
 @router.get("")
-async def list_tables(user: str = Depends(get_current_user)):
+def list_tables(user: str = Depends(get_current_user)):
     client = get_bq_client()
     tables = bq_meta.list_tables(client)
     return {"tables": tables}
 
 
 @router.get("/{table_id}")
-async def get_table_detail(table_id: str, user: str = Depends(get_current_user)):
+def get_table_detail(table_id: str, user: str = Depends(get_current_user)):
     client = get_bq_client()
     try:
         table = bq_meta.get_table(client, table_id)
@@ -41,9 +55,7 @@ async def get_table_detail(table_id: str, user: str = Depends(get_current_user))
 
 
 @router.get("/{table_id}/preview")
-async def preview_table(
-    table_id: str, limit: int = Config.PREVIEW_ROW_LIMIT, user: str = Depends(get_current_user)
-):
+def preview_table(table_id: str, limit: int = Config.PREVIEW_ROW_LIMIT, user: str = Depends(get_current_user)):
     client = get_bq_client()
     try:
         result = preview.preview_rows(client, table_id, limit=limit)
