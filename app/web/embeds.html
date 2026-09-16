@@ -246,7 +246,13 @@
 </div>
 
 <div class="card">
-  <h2 id="list-title">Dashboard của tôi</h2>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+    <h2 id="list-title" style="margin:0;">Dashboard của tôi</h2>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; cursor:pointer;">
+      <input type="checkbox" id="show-all-toggle" checked style="accent-color:var(--series-1); cursor:pointer;" />
+      Hiện của tất cả mọi người
+    </label>
+  </div>
   <div id="embed-list"><p class="empty-state">Đang tải...</p></div>
 </div>
 
@@ -578,10 +584,17 @@ document.getElementById('cancel-edit-btn').addEventListener('click', exitEditMod
 // tạo/thu hồi tạm thời "biến mất"/"còn sống" sai, trông như thao tác thất bại.
 let cachedEmbeds = [];
 
+function updateListTitle() {
+  const showAll = document.getElementById('show-all-toggle').checked;
+  document.getElementById('list-title').textContent = showAll ? 'Tất cả dashboard' : `Dashboard của ${devUser}`;
+}
+
 async function loadEmbeds() {
   const listEl = document.getElementById('embed-list');
+  const showAll = document.getElementById('show-all-toggle').checked;
+  updateListTitle();
   try {
-    const data = await apiFetch('/api/embeds');
+    const data = await apiFetch(`/api/embeds${showAll ? '?all=true' : ''}`);
     cachedEmbeds = data.embeds || [];
     renderEmbeds(cachedEmbeds);
   } catch (e) {
@@ -592,6 +605,8 @@ async function loadEmbeds() {
     listEl.appendChild(p);
   }
 }
+
+document.getElementById('show-all-toggle').addEventListener('change', loadEmbeds);
 
 function renderEmbeds(embeds) {
   const listEl = document.getElementById('embed-list');
@@ -802,7 +817,6 @@ async function saveEdit(embedId, title, specObj, btn, resultEl) {
           + '<a href="/">← Quay lại Tư vấn chọn bảng</a></p>';
         return;
       }
-      document.getElementById('list-title').textContent = `Dashboard của ${me.user}`;
       loadEmbeds();
       return;
     }
