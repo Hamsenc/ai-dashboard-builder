@@ -185,6 +185,7 @@
     </div>
     <p>Mô tả báo cáo bạn muốn làm — mình gợi ý bảng dữ liệu phù hợp.</p>
     <p id="whoami"></p>
+    <p id="embeds-nav" hidden><a href="/embeds.html">Nhúng dashboard vào Lark →</a></p>
   </div>
   <div id="messages"></div>
   <div id="input-row">
@@ -248,6 +249,7 @@ async function initIdentity() {
       input.disabled = false;
       input.placeholder = 'Mô tả báo cáo bạn muốn làm...';
       document.getElementById('send-btn').disabled = false;
+      document.getElementById('embeds-nav').hidden = !me.can_upload_embed;
       return;
     }
   } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }

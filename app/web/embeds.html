@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nhúng dashboard — Data Explorer</title>
+<link rel="stylesheet" href="/theme.css" />
+<style>
+  body { padding: 28px 32px; max-width: 760px; margin: 0 auto; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  h1 { font-size: 20px; font-weight: 650; margin: 0; }
+  #back-link { font-size: 12.5px; color: var(--ink-muted); }
+  p.lead { font-size: 13px; color: var(--ink-secondary); margin: 4px 0 22px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 14px; font-weight: 650; margin: 0 0 12px; }
+  label { display: block; font-size: 12.5px; font-weight: 600; margin: 12px 0 4px; }
+  label:first-child { margin-top: 0; }
+  input[type=text], input[type=file], textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink-primary); font-size: 13px; font-family: inherit;
+  }
+  textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 12px; resize: vertical; }
+  .hint { font-size: 11.5px; color: var(--ink-muted); margin-top: 4px; }
+  .hint code { font-family: ui-monospace, monospace; }
+
+  #upload-btn {
+    margin-top: 16px; padding: 9px 18px; border: none; border-radius: 8px; background: var(--series-1);
+    color: #fff; font-weight: 600; font-size: 13px; cursor: pointer;
+  }
+  #upload-btn:hover { opacity: 0.9; }
+  button:disabled, button.is-busy { opacity: 0.6; cursor: default; }
+
+  #upload-result { margin-top: 14px; font-size: 13px; }
+  #upload-result.error { color: var(--critical); }
+  .view-url-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+  .view-url-row input { flex: 1; font-family: ui-monospace, monospace; font-size: 12px; }
+  .view-url-row button {
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-primary);
+    border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap;
+  }
+
+  .embed-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .embed-row:last-child { border-bottom: none; }
+  .embed-row-main { flex: 1; min-width: 0; }
+  .embed-row-title { font-size: 13px; font-weight: 600; }
+  .embed-row-meta { font-size: 11.5px; color: var(--ink-muted); margin-top: 2px; }
+  .embed-row a { font-size: 12px; }
+  .embed-row-revoke {
+    border: 1px solid var(--critical); background: transparent; color: var(--critical);
+    border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+  }
+  .empty-state { color: var(--ink-muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Nhúng dashboard vào Lark</h1>
+  <a id="back-link" href="/">← Data Explorer</a>
+</header>
+<p class="lead">Upload 1 file HTML dashboard (Claude hoặc AI khác sinh ra) để nhận link
+  nhúng iframe vào Lark. Ai có link đều xem được, không cần đăng nhập.</p>
+
+<div class="card">
+  <h2>Upload dashboard mới</h2>
+  <label for="f-title">Tên dashboard</label>
+  <input type="text" id="f-title" placeholder="VD: Báo cáo doanh thu tuần" />
+
+  <label for="f-file">File HTML</label>
+  <input type="file" id="f-file" accept=".html,text/html" />
+
+  <label for="f-spec">Dữ liệu sống (tùy chọn — để trống nếu dashboard đã có sẵn số liệu tĩnh)</label>
+  <textarea id="f-spec" placeholder='{"table_id": "surya-495408.00_serving_sales.vw_...", "columns": ["region"], "aggregations": [{"column": "revenue", "fn": "SUM", "alias": "total_revenue"}]}'></textarea>
+  <p class="hint">
+    Nếu điền, dashboard có thể gọi <code>fetch('data')</code> (hoặc dùng URL tương đối bất kỳ —
+    app tự chèn <code>&lt;base&gt;</code> để trỏ đúng) lúc trang mở/refresh để lấy số liệu sống
+    từ bảng trong phạm vi Serving. Không hỗ trợ SQL tự do — chỉ nhận spec JSON:
+    <code>table_id</code>, <code>columns</code>, <code>aggregations[]</code> ({column, fn, alias}),
+    <code>filters[]</code> ({column, op, value, type}), <code>order_by[]</code> ({column, direction}), <code>limit</code>.
+  </p>
+
+  <button id="upload-btn">Upload</button>
+  <div id="upload-result"></div>
+</div>
+
+<div class="card">
+  <h2 id="list-title">Dashboard của tôi</h2>
+  <div id="embed-list"><p class="empty-state">Đang tải...</p></div>
+</div>
+
+<script>
+let devUser = localStorage.getItem('dev_user') || 'dev@local';
+
+async function apiFetch(path, opts = {}) {
+  opts.headers = Object.assign({'Content-Type': 'application/json', 'X-Dev-User': devUser}, opts.headers || {});
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed.detail === 'string') message = parsed.detail;
+    } catch (e) { /* không phải JSON, giữ nguyên text */ }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+function setButtonBusy(btn, busyText) {
+  if (btn.dataset.originalText === undefined) btn.dataset.originalText = btn.textContent;
+  btn.disabled = true;
+  btn.classList.add('is-busy');
+  btn.textContent = busyText;
+}
+function clearButtonBusy(btn) {
+  btn.disabled = false;
+  btn.classList.remove('is-busy');
+  if (btn.dataset.originalText !== undefined) btn.textContent = btn.dataset.originalText;
+}
+
+async function loadEmbeds() {
+  const listEl = document.getElementById('embed-list');
+  try {
+    const data = await apiFetch('/api/embeds');
+    renderEmbeds(data.embeds);
+  } catch (e) {
+    listEl.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'empty-state';
+    p.textContent = 'Lỗi tải danh sách: ' + e.message;
+    listEl.appendChild(p);
+  }
+}
+
+function renderEmbeds(embeds) {
+  const listEl = document.getElementById('embed-list');
+  listEl.innerHTML = '';
+  if (!embeds || embeds.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'empty-state';
+    p.textContent = 'Chưa có dashboard nào.';
+    listEl.appendChild(p);
+    return;
+  }
+  embeds.forEach((embed) => {
+    const row = document.createElement('div');
+    row.className = 'embed-row';
+
+    const main = document.createElement('div');
+    main.className = 'embed-row-main';
+    const title = document.createElement('div');
+    title.className = 'embed-row-title';
+    title.textContent = embed.title || '(không có tên)'; // untrusted content -> textContent
+    const meta = document.createElement('div');
+    meta.className = 'embed-row-meta';
+    meta.textContent = `${embed.created_by} · ${new Date(embed.event_at).toLocaleString('vi-VN')}`;
+    main.appendChild(title);
+    main.appendChild(meta);
+
+    const link = document.createElement('a');
+    link.href = `/d/${embed.embed_id}`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = 'Xem link →';
+
+    const revokeBtn = document.createElement('button');
+    revokeBtn.className = 'embed-row-revoke';
+    revokeBtn.textContent = 'Thu hồi';
+    revokeBtn.onclick = () => revokeEmbed(embed.embed_id, revokeBtn);
+
+    row.appendChild(main);
+    row.appendChild(link);
+    row.appendChild(revokeBtn);
+    listEl.appendChild(row);
+  });
+}
+
+async function revokeEmbed(embedId, btn) {
+  if (!confirm('Thu hồi link này? Ai đang có link sẽ không xem được nữa.')) return;
+  setButtonBusy(btn, '...');
+  try {
+    await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}/revoke`, {method: 'POST'});
+    loadEmbeds();
+  } catch (e) {
+    alert('Lỗi thu hồi: ' + e.message);
+    clearButtonBusy(btn);
+  }
+}
+
+document.getElementById('upload-btn').onclick = async () => {
+  const btn = document.getElementById('upload-btn');
+  const resultEl = document.getElementById('upload-result');
+  resultEl.className = '';
+  resultEl.innerHTML = '';
+
+  const title = document.getElementById('f-title').value.trim();
+  const fileInput = document.getElementById('f-file');
+  const specText = document.getElementById('f-spec').value.trim();
+
+  if (!title) { resultEl.className = 'error'; resultEl.textContent = 'Cần nhập tên dashboard.'; return; }
+  if (!fileInput.files[0]) { resultEl.className = 'error'; resultEl.textContent = 'Cần chọn 1 file HTML.'; return; }
+  if (specText) {
+    try { JSON.parse(specText); }
+    catch (e) { resultEl.className = 'error'; resultEl.textContent = 'Dữ liệu sống không phải JSON hợp lệ: ' + e.message; return; }
+  }
+
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('file', fileInput.files[0]);
+  if (specText) formData.append('data_query_spec', specText);
+
+  setButtonBusy(btn, 'Đang upload...');
+  try {
+    // KHÔNG dùng apiFetch() ở đây: helper đó hardcode Content-Type: application/json,
+    // sẽ phá mất multipart boundary browser tự set cho FormData.
+    const res = await fetch('/api/embeds', {method: 'POST', headers: {'X-Dev-User': devUser}, body: formData});
+    if (!res.ok) {
+      const text = await res.text();
+      let message = text;
+      try { const parsed = JSON.parse(text); if (parsed && typeof parsed.detail === 'string') message = parsed.detail; } catch (e) {}
+      throw new Error(message);
+    }
+    const data = await res.json();
+    const fullUrl = window.location.origin + data.view_url;
+    resultEl.innerHTML = '';
+    const label = document.createElement('div');
+    label.textContent = 'Upload xong! Link nhúng vào Lark:';
+    const row = document.createElement('div');
+    row.className = 'view-url-row';
+    const urlInput = document.createElement('input');
+    urlInput.type = 'text'; urlInput.readOnly = true; urlInput.value = fullUrl;
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Copy';
+    copyBtn.onclick = () => { urlInput.select(); navigator.clipboard?.writeText(fullUrl); };
+    row.appendChild(urlInput); row.appendChild(copyBtn);
+    resultEl.appendChild(label);
+    resultEl.appendChild(row);
+
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-file').value = '';
+    document.getElementById('f-spec').value = '';
+    loadEmbeds();
+  } catch (e) {
+    resultEl.className = 'error';
+    resultEl.textContent = 'Lỗi upload: ' + e.message;
+  } finally {
+    clearButtonBusy(btn);
+  }
+};
+
+(async function init() {
+  try {
+    const res = await fetch('/api/me', {headers: {'X-Dev-User': devUser}});
+    if (res.ok) {
+      const me = await res.json();
+      devUser = me.user;
+      if (!me.can_upload_embed) {
+        document.body.innerHTML = '<p class="empty-state">Bạn chưa được cấp quyền upload dashboard. '
+          + '<a href="/">← Quay lại Data Explorer</a></p>';
+        return;
+      }
+      document.getElementById('list-title').textContent = `Dashboard của ${me.user}`;
+      loadEmbeds();
+      return;
+    }
+  } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }
+  document.body.innerHTML = '<p class="empty-state">Bạn cần <a href="/auth/lark/login">đăng nhập Lark</a> trước.</p>';
+})();
+</script>
+
+</body>
+</html>

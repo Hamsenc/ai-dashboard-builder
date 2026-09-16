@@ -31,3 +31,24 @@ class Config:
     # Chưa có Lark OAuth thật (Phase 9) — dùng header X-Dev-User tạm, mặc định giá trị
     # này khi header vắng mặt. PHẢI thay bằng identity thật trước khi đưa vào dùng thật.
     DEV_USER_FALLBACK = os.environ.get("DEV_USER_FALLBACK", "dev@local")
+
+    # Dashboard Embeds: host file HTML dashboard (AI sinh ra) để nhúng link vào Lark.
+    # Bucket GIỮ PRIVATE hoàn toàn — app luôn proxy đọc qua server (auth/deps.get_bq_client
+    # kiểu credential riêng của service), browser không bao giờ chạm GCS trực tiếp.
+    EMBEDS_GCS_BUCKET = os.environ.get("EMBEDS_GCS_BUCKET", "surya-495408-dashboard-builder-embeds")
+    # Email người được phép upload dashboard mới — nhóm nhỏ đã duyệt trước, không
+    # mở cho tất cả người đã đăng nhập. So sánh phải normalize .strip().lower().
+    UPLOAD_WHITELIST_EMAILS = [
+        e.strip().lower()
+        for e in os.environ.get("UPLOAD_WHITELIST_EMAILS", "").split(",")
+        if e.strip()
+    ]
+    EMBED_MAX_HTML_BYTES = int(os.environ.get("EMBED_MAX_HTML_BYTES", str(2 * 1024 * 1024)))
+    # Ngưỡng bytes riêng cho query sống của embed (khác BQ_MAX_BYTES_BILLED chung) vì
+    # đây là endpoint PUBLIC không cần đăng nhập — 1 link lộ ra ngoài không được phép
+    # kéo theo chi phí BigQuery lớn. execution.bq_client.execute() enforce ngưỡng này.
+    EMBED_DATA_MAX_BYTES_BILLED = int(os.environ.get("EMBED_DATA_MAX_BYTES_BILLED", str(200 * 1024 * 1024)))
+    # Cache kết quả query sống trong process theo embed_id — dashboard chỉ load lại
+    # lúc mở trang/bấm refresh (không tự poll), cache này chỉ để tránh nhiều người
+    # mở cùng lúc làm tốn BigQuery lặp lại vô ích.
+    EMBED_DATA_CACHE_TTL_SECONDS = int(os.environ.get("EMBED_DATA_CACHE_TTL_SECONDS", "300"))

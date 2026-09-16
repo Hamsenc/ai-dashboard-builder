@@ -18,6 +18,12 @@ gcloud services enable \
   secretmanager.googleapis.com \
   --project="$PROJECT_ID"
 
+echo "== Tạo bucket Dashboard Embeds (1 lần, thủ công — không có script tạo bucket nào" \
+     "trong repo, kể cả bucket catalog hiện tại cũng được tạo tay từ trước) =="
+echo "  gsutil mb -p $PROJECT_ID -l $REGION gs://surya-495408-dashboard-builder-embeds"
+echo "  gsutil iam ch serviceAccount:${SA_EMAIL}:roles/storage.objectAdmin gs://surya-495408-dashboard-builder-embeds"
+echo "(bỏ qua nếu bucket đã tồn tại)"
+
 echo "== Deploy Cloud Run service (build từ Dockerfile qua Cloud Build) =="
 # --allow-unauthenticated: BẮT BUỘC vì Lark OAuth redirect đưa trình duyệt user
 # (không có Google IAM token) thẳng tới /auth/lark/callback — Cloud Run IAM sẽ chặn
@@ -50,7 +56,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --memory=1Gi \
   --timeout=540s \
   --max-instances=5 \
-  --set-env-vars="^;^GCP_PROJECT=${PROJECT_ID};GCP_REGION=${REGION};BQ_APP_DATASET=12_data_agent_log;BQ_APP_TABLE_PREFIX=raw_dashboard_builder_;CATALOG_GCS_BUCKET=surya-495408-dashboard-builder-catalog;SERVING_DATASETS=00_serving_sales,00_serving_inventory,00_serving_operation;LARK_BASE_TOKEN=AcITbzsvraObhisDdQXlO6tggkd;LARK_TABLE_CATALOG_ID=tblA61jccZSexp2F;LARK_TABLE_KPI_ID=tblNr2LJO47ClgWW;LARK_OAUTH_HOST=https://open.larksuite.com;CLAUDE_MODEL=claude-sonnet-5;LARK_APP_ID=${LARK_APP_ID:?Set LARK_APP_ID env var trước khi chạy (không phải secret nhưng cũng không nên hardcode trong script commit lên git)}" \
+  --set-env-vars="^;^GCP_PROJECT=${PROJECT_ID};GCP_REGION=${REGION};BQ_APP_DATASET=12_data_agent_log;BQ_APP_TABLE_PREFIX=raw_dashboard_builder_;CATALOG_GCS_BUCKET=surya-495408-dashboard-builder-catalog;EMBEDS_GCS_BUCKET=surya-495408-dashboard-builder-embeds;UPLOAD_WHITELIST_EMAILS=ngadt@hapas.vn,ductm@hapas.vn,thint@hapas.vn;SERVING_DATASETS=00_serving_sales,00_serving_inventory,00_serving_operation;LARK_BASE_TOKEN=AcITbzsvraObhisDdQXlO6tggkd;LARK_TABLE_CATALOG_ID=tblA61jccZSexp2F;LARK_TABLE_KPI_ID=tblNr2LJO47ClgWW;LARK_OAUTH_HOST=https://open.larksuite.com;CLAUDE_MODEL=claude-sonnet-5;LARK_APP_ID=${LARK_APP_ID:?Set LARK_APP_ID env var trước khi chạy (không phải secret nhưng cũng không nên hardcode trong script commit lên git)}" \
   --set-secrets="CLAUDE_CODE_OAUTH_TOKEN=dashboard-builder-claude-code-oauth-token:latest,LARK_APP_SECRET=dashboard-builder-lark-app-secret:latest,SESSION_SECRET=dashboard-builder-session-secret:latest"
 
 echo "== Xong. URL service (public ở tầng mạng, gác cổng bằng Lark OAuth ở tầng app): =="

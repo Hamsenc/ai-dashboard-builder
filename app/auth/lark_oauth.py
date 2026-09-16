@@ -97,9 +97,17 @@ async def callback(request: Request, code: str | None = None, state: str | None 
     session_token = create_session_token(session_payload)
 
     response = RedirectResponse("/")
+    # path="/api": mọi route có Depends(get_current_user) đều nằm dưới /api/*
+    # (verify: app/main.py, app/api/catalog.py, app/api/advise.py) — giới hạn
+    # cookie vào đúng path này để KHÔNG bị browser tự động gửi tới /d/{embed_id}
+    # (Dashboard Embeds, xem app/api/embed_view.py). Cần thiết vì dashboard HTML
+    # được phép chạy script sống — nếu cookie vẫn Path=/ mặc định, 1 script trong
+    # dashboard (vô ý hay bị compromise) có thể fetch('/api/tables') và browser sẽ
+    # tự đính kèm cookie của người đang xem nếu họ từng đăng nhập app này cùng
+    # trình duyệt.
     response.set_cookie(
         "session", session_token, httponly=True, secure=True, samesite="lax",
-        max_age=12 * 60 * 60,
+        max_age=12 * 60 * 60, path="/api",
     )
     return response
 
@@ -107,5 +115,8 @@ async def callback(request: Request, code: str | None = None, state: str | None 
 @router.get("/logout")
 async def logout():
     response = RedirectResponse("/")
-    response.delete_cookie("session")
+    # path="/api" PHẢI khớp chính xác với path lúc set_cookie ở trên — cookie xoá
+    # theo cặp (name, path), lệch path thì lệnh xoá này thành no-op, không xoá được
+    # cookie thật.
+    response.delete_cookie("session", path="/api")
     return response
