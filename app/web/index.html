@@ -7,7 +7,23 @@
 <link rel="stylesheet" href="/theme.css" />
 <style>
   html, body { height: 100%; }
-  body { display: flex; height: 100vh; }
+  body { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ---------- Tab bar dùng chung giữa Data Explorer và Nhúng dashboard ---------- */
+  .app-tabs {
+    display: flex; gap: 4px; padding: 10px 16px 0; background: var(--surface-2);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .app-tab {
+    padding: 9px 18px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 600;
+    color: var(--ink-secondary); text-decoration: none; border: 1px solid transparent;
+  }
+  .app-tab:hover { color: var(--ink-primary); }
+  .app-tab.active {
+    background: var(--surface); color: var(--ink-primary); border-color: var(--border);
+    border-bottom-color: var(--surface); position: relative; top: 1px;
+  }
+  .app-content { display: flex; flex: 1; min-height: 0; }
 
   /* ---------- Chat pane (Advisor) ---------- */
   #chat-pane {
@@ -60,13 +76,6 @@
   #explorer-pane { flex: 1; padding: 28px 32px; overflow-y: auto; }
   #explorer-header { display:flex; align-items:center; justify-content:space-between; gap: 16px; margin-bottom: 18px; }
   #explorer-header h2 { font-size: 20px; font-weight: 650; margin: 0; }
-  #explorer-header-actions { display: flex; align-items: center; gap: 10px; }
-  #embeds-nav-btn {
-    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
-    background: var(--series-1); color: #fff; font-weight: 600; font-size: 13px;
-    text-decoration: none; white-space: nowrap;
-  }
-  #embeds-nav-btn:hover { opacity: 0.9; }
   #whoami { font-size: 11px; color: var(--ink-muted); }
 
   #search-row { margin-bottom: 16px; }
@@ -184,6 +193,13 @@
 </head>
 <body>
 
+<div class="app-tabs">
+  <a href="/" class="app-tab active">🗂️ Tư vấn chọn bảng</a>
+  <a href="/embeds.html" class="app-tab" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
+</div>
+
+<div class="app-content">
+
 <div id="chat-pane">
   <div id="chat-header">
     <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -204,10 +220,7 @@
   <div id="list-view">
     <div id="explorer-header">
       <h2 id="explorer-title">Bảng dữ liệu Serving</h2>
-      <div id="explorer-header-actions">
-        <a id="embeds-nav-btn" href="/embeds.html" hidden>📊 Nhúng dashboard vào Lark</a>
-        <button id="cancel-filter-btn" hidden>✕ Hủy lọc, xem tất cả bảng</button>
-      </div>
+      <button id="cancel-filter-btn" hidden>✕ Hủy lọc, xem tất cả bảng</button>
     </div>
     <p id="filter-reason" hidden></p>
     <div id="search-row">
@@ -220,6 +233,8 @@
     <button id="back-btn">← Quay lại danh sách</button>
     <div id="detail-body"></div>
   </div>
+</div>
+
 </div>
 
 <script>
@@ -258,7 +273,7 @@ async function initIdentity() {
       input.disabled = false;
       input.placeholder = 'Mô tả báo cáo bạn muốn làm...';
       document.getElementById('send-btn').disabled = false;
-      document.getElementById('embeds-nav-btn').hidden = !me.can_upload_embed;
+      document.getElementById('embeds-tab').hidden = !me.can_upload_embed;
       return;
     }
   } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }
