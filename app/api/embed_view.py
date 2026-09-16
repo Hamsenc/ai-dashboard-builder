@@ -23,9 +23,13 @@ from storage import embeds_store
 
 router = APIRouter(prefix="/d")
 
-# Chỉ cho phép Lark nhúng iframe trang này — domain khác thì không, chặn
-# clickjacking/nhúng lại ở nơi không mong muốn.
-_EMBED_CSP = "frame-ancestors https://*.larksuite.com https://*.feishu.cn"
+# ĐÃ THỬ chặn frame-ancestors chỉ *.larksuite.com/*.feishu.cn — test thật trên Lark
+# (block "Embeds") bị chặn "refused to connect", trong khi mở thẳng URL bằng trình
+# duyệt thường thì chạy bình thường (đã xác nhận không phải lỗi khác). Không biết
+# chắc origin thật Lark dùng để tải iframe (có thể qua domain trung gian/sandbox
+# khác), nên bỏ hẳn giới hạn — an toàn thật sự nằm ở embed_id ngẫu nhiên không đoán
+# được (bản chất là share-link, không phải domain nào được phép nhúng), không phải
+# ở header này.
 
 _BASE_TAG_RE = re.compile(r"<base\s", re.IGNORECASE)
 _HEAD_RE = re.compile(r"(<head[^>]*>)", re.IGNORECASE)
@@ -76,7 +80,7 @@ def view_embed(embed_id: str):
 
     html = download_html(embed["gcs_path"])
     html = _inject_base_tag(html, embed_id)
-    return HTMLResponse(html, headers={"Content-Security-Policy": _EMBED_CSP})
+    return HTMLResponse(html)
 
 
 # Cache in-process kết quả query sống theo embed_id — dashboard chỉ load lại lúc
