@@ -77,7 +77,7 @@ def get_current_embed(client: bigquery.Client, embed_id: str) -> dict[str, Any] 
 
 
 def list_current_embeds(client: bigquery.Client, created_by: str | None = None) -> list[dict[str, Any]]:
-    sql = f"SELECT * FROM `{_table('v_current_embeds')}` WHERE event = 'created'"
+    sql = f"SELECT * FROM `{_table('v_current_embeds')}` WHERE event != 'revoked'"
     query_parameters = []
     if created_by is not None:
         sql += " AND created_by = @created_by"

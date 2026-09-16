@@ -126,6 +126,16 @@
   }
   .empty-state { color: var(--ink-muted); font-size: 13px; }
   .field-error { color: var(--critical); font-size: 12px; margin-top: 6px; }
+  .embed-row-edit {
+    border: 1px solid var(--border); background: transparent; color: var(--ink-primary);
+    border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; white-space: nowrap;
+  }
+  .embed-row-edit:hover { background: var(--surface-2); }
+  .edit-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--series-1-wash); color: var(--series-1); border-radius: 8px;
+    padding: 9px 14px; font-size: 12.5px; margin-bottom: 16px;
+  }
 </style>
 </head>
 <body>
@@ -142,14 +152,18 @@
   công khai, nhúng iframe được vào Lark — ai có link đều xem được, không cần đăng nhập.</p>
 
 <div class="card">
-  <h2>Upload dashboard mới</h2>
+  <h2 id="form-title-label">Upload dashboard mới</h2>
+  <div class="edit-banner" id="edit-banner" hidden>
+    <span>Đang sửa "<strong id="edit-banner-title"></strong>" — file HTML giữ nguyên, chỉ đổi tên/dữ liệu sống.</span>
+    <button type="button" class="link-btn" id="cancel-edit-btn">Hủy sửa</button>
+  </div>
 
   <div class="field">
     <label class="field-label" for="f-title">Tên dashboard</label>
     <input type="text" id="f-title" placeholder="VD: Báo cáo doanh thu tuần" />
   </div>
 
-  <div class="field">
+  <div class="field" id="file-field">
     <label class="field-label" for="f-file">File HTML</label>
     <input type="file" id="f-file" accept=".html,text/html" />
   </div>
@@ -282,6 +296,7 @@ let tablesData = [];           // cache /api/tables, tải 1 lần khi bật tog
 let selectedTable = null;      // table object đang chọn (có .columns)
 let aggRowCount = 0;
 let filterRowCount = 0;
+let editingEmbedId = null;     // null = đang tạo mới, string = đang sửa embed này
 
 function bqTypeToInputType(bqType) {
   if (bqType === 'DATE' || bqType === 'TIMESTAMP') return 'date';
@@ -319,8 +334,9 @@ document.getElementById('live-toggle').addEventListener('change', async (e) => {
   if (e.target.checked) await ensureTablesLoaded();
 });
 
-document.getElementById('spec-table').addEventListener('change', (e) => {
-  selectedTable = tablesData.find(t => t.table_id === e.target.value) || null;
+function selectTable(tableId) {
+  document.getElementById('spec-table').value = tableId || '';
+  selectedTable = tablesData.find(t => t.table_id === tableId) || null;
   document.getElementById('spec-fields').hidden = !selectedTable;
   if (!selectedTable) return;
 
@@ -329,7 +345,8 @@ document.getElementById('spec-table').addEventListener('change', (e) => {
   document.getElementById('filter-rows').innerHTML = '';
   aggRowCount = 0; filterRowCount = 0;
   refreshOrderByOptions();
-});
+}
+document.getElementById('spec-table').addEventListener('change', (e) => selectTable(e.target.value));
 
 function renderColumnChips() {
   const grid = document.getElementById('spec-columns');
@@ -364,42 +381,45 @@ function columnOptionsHtml(selectedValue) {
   ).join('');
 }
 
-function addAggRow() {
+function addAggRow(initial) {
   const idx = aggRowCount++;
   const row = document.createElement('div');
   row.className = 'dyn-row';
   row.dataset.idx = idx;
   row.innerHTML = `
-    <select class="agg-column">${columnOptionsHtml()}</select>
-    <select class="agg-fn">${Object.entries(AGG_FN_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
-    <input type="text" class="agg-alias" placeholder="tên cột kết quả" />
+    <select class="agg-column">${columnOptionsHtml(initial ? initial.column : undefined)}</select>
+    <select class="agg-fn">${Object.entries(AGG_FN_LABELS).map(([v, l]) =>
+      `<option value="${v}" ${initial && initial.fn && initial.fn.toUpperCase() === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <input type="text" class="agg-alias" placeholder="tên cột kết quả" value="${initial ? initial.alias : ''}" />
     <button type="button" class="dyn-row-remove" title="Xóa">×</button>
   `;
+  const aliasInput = row.querySelector('.agg-alias');
+  if (initial) aliasInput.dataset.userEdited = '1'; // đã có alias thật từ spec cũ, đừng tự ghi đè
   const updateAlias = () => {
     const col = row.querySelector('.agg-column').value;
     const fn = row.querySelector('.agg-fn').value;
-    const aliasInput = row.querySelector('.agg-alias');
     if (!aliasInput.dataset.userEdited) aliasInput.value = `${fn.toLowerCase()}_${col}`;
   };
   row.querySelector('.agg-column').addEventListener('change', () => { updateAlias(); refreshOrderByOptions(); });
   row.querySelector('.agg-fn').addEventListener('change', () => { updateAlias(); refreshOrderByOptions(); });
-  row.querySelector('.agg-alias').addEventListener('input', (e) => { e.target.dataset.userEdited = '1'; refreshOrderByOptions(); });
+  aliasInput.addEventListener('input', (e) => { e.target.dataset.userEdited = '1'; refreshOrderByOptions(); });
   row.querySelector('.dyn-row-remove').addEventListener('click', () => { row.remove(); refreshOrderByOptions(); });
   document.getElementById('agg-rows').appendChild(row);
-  updateAlias();
+  if (!initial) updateAlias();
   refreshOrderByOptions();
 }
 
-function addFilterRow() {
+function addFilterRow(initial) {
   const row = document.createElement('div');
   row.className = 'dyn-row filter-row';
   row.innerHTML = `
-    <select class="filter-column">${columnOptionsHtml()}</select>
-    <select class="filter-op">${Object.entries(FILTER_OP_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+    <select class="filter-column">${columnOptionsHtml(initial ? initial.column : undefined)}</select>
+    <select class="filter-op">${Object.entries(FILTER_OP_LABELS).map(([v, l]) =>
+      `<option value="${v}" ${initial && initial.op === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <span class="filter-value-slot"></span>
     <button type="button" class="dyn-row-remove" title="Xóa">×</button>
   `;
-  const renderValueInput = () => {
+  const renderValueInput = (presetValue) => {
     const colName = row.querySelector('.filter-column').value;
     const col = (selectedTable.columns || []).find(c => c.name === colName);
     const bqType = col ? col.type : 'STRING';
@@ -410,16 +430,17 @@ function addFilterRow() {
     input.className = 'filter-value';
     input.placeholder = 'giá trị';
     input.dataset.bqType = bqType;
+    if (presetValue !== undefined) input.value = presetValue;
     slot.appendChild(input);
   };
-  row.querySelector('.filter-column').addEventListener('change', renderValueInput);
+  row.querySelector('.filter-column').addEventListener('change', () => renderValueInput());
   row.querySelector('.dyn-row-remove').addEventListener('click', () => row.remove());
   document.getElementById('filter-rows').appendChild(row);
-  renderValueInput();
+  renderValueInput(initial ? initial.value : undefined);
 }
 
-document.getElementById('add-agg-btn').addEventListener('click', addAggRow);
-document.getElementById('add-filter-btn').addEventListener('click', addFilterRow);
+document.getElementById('add-agg-btn').addEventListener('click', () => addAggRow());
+document.getElementById('add-filter-btn').addEventListener('click', () => addFilterRow());
 
 function refreshOrderByOptions() {
   const orderSelect = document.getElementById('order-column');
@@ -477,6 +498,77 @@ document.querySelectorAll('input[name="spec-mode"]').forEach(radio => {
     }
   });
 });
+
+function resetLiveDataFields() {
+  document.getElementById('spec-table').value = '';
+  document.getElementById('spec-fields').hidden = true;
+  selectedTable = null;
+  document.getElementById('agg-rows').innerHTML = '';
+  document.getElementById('filter-rows').innerHTML = '';
+  aggRowCount = 0; filterRowCount = 0;
+  document.getElementById('f-spec-advanced').value = '';
+  document.querySelector('input[name="spec-mode"][value="picker"]').checked = true;
+  document.getElementById('picker-mode').hidden = false;
+  document.getElementById('json-mode').hidden = true;
+}
+
+async function loadSpecIntoPicker(spec) {
+  await ensureTablesLoaded();
+  selectTable(spec.table_id);
+  (spec.columns || []).forEach(colName => {
+    const cb = document.querySelector(`#spec-columns input[value="${CSS.escape(colName)}"]`);
+    if (cb) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+  });
+  (spec.aggregations || []).forEach(agg => addAggRow(agg));
+  (spec.filters || []).forEach(f => addFilterRow(f));
+  if (spec.order_by && spec.order_by[0]) {
+    refreshOrderByOptions();
+    document.getElementById('order-column').value = spec.order_by[0].column;
+    document.getElementById('order-direction').value = spec.order_by[0].direction;
+  }
+  if (spec.limit) document.getElementById('spec-limit').value = spec.limit;
+}
+
+/* ============================== Sửa embed đã tạo ============================== */
+
+async function enterEditMode(embed) {
+  editingEmbedId = embed.embed_id;
+  document.getElementById('form-title-label').textContent = 'Sửa dashboard';
+  document.getElementById('file-field').hidden = true;
+  document.getElementById('edit-banner-title').textContent = embed.title || '(không có tên)';
+  document.getElementById('edit-banner').hidden = false;
+  document.getElementById('f-title').value = embed.title || '';
+  document.getElementById('upload-btn').textContent = 'Lưu thay đổi';
+  document.getElementById('upload-result').className = ''; document.getElementById('upload-result').innerHTML = '';
+  document.getElementById('form-error').hidden = true;
+
+  document.getElementById('live-toggle').checked = false;
+  document.getElementById('live-data-panel').hidden = true;
+  resetLiveDataFields();
+
+  if (embed.data_query_spec) {
+    document.getElementById('live-toggle').checked = true;
+    document.getElementById('live-data-panel').hidden = false;
+    await loadSpecIntoPicker(embed.data_query_spec);
+  }
+
+  document.querySelector('.card').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function exitEditMode() {
+  editingEmbedId = null;
+  document.getElementById('form-title-label').textContent = 'Upload dashboard mới';
+  document.getElementById('file-field').hidden = false;
+  document.getElementById('edit-banner').hidden = true;
+  document.getElementById('upload-btn').textContent = 'Upload';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-file').value = '';
+  document.getElementById('live-toggle').checked = false;
+  document.getElementById('live-data-panel').hidden = true;
+  resetLiveDataFields();
+}
+
+document.getElementById('cancel-edit-btn').addEventListener('click', exitEditMode);
 
 /* ============================== Danh sách embed của tôi ============================== */
 
@@ -540,6 +632,11 @@ function renderEmbeds(embeds) {
     link.rel = 'noopener';
     link.textContent = 'Xem link →';
 
+    const editBtn = document.createElement('button');
+    editBtn.className = 'embed-row-edit';
+    editBtn.textContent = '✏️ Sửa';
+    editBtn.onclick = () => enterEditMode(embed);
+
     const revokeBtn = document.createElement('button');
     revokeBtn.className = 'embed-row-revoke';
     revokeBtn.textContent = 'Thu hồi';
@@ -547,6 +644,7 @@ function renderEmbeds(embeds) {
 
     row.appendChild(main);
     row.appendChild(link);
+    row.appendChild(editBtn);
     row.appendChild(revokeBtn);
     listEl.appendChild(row);
   });
@@ -567,7 +665,7 @@ async function revokeEmbed(embedId, btn) {
   }
 }
 
-/* ============================== Submit upload ============================== */
+/* ============================== Submit: tạo mới hoặc lưu sửa ============================== */
 
 document.getElementById('upload-btn').onclick = async () => {
   const btn = document.getElementById('upload-btn');
@@ -582,14 +680,14 @@ document.getElementById('upload-btn').onclick = async () => {
   const advancedEl = document.getElementById('f-spec-advanced');
 
   if (!title) { errorEl.hidden = false; errorEl.textContent = 'Cần nhập tên dashboard.'; return; }
-  if (!fileInput.files[0]) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn 1 file HTML.'; return; }
+  if (!editingEmbedId && !fileInput.files[0]) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn 1 file HTML.'; return; }
 
-  let specText = '';
+  let specObj = null;
   if (liveOn) {
     if (currentSpecMode() === 'json') {
-      specText = advancedEl.value.trim();
+      const specText = advancedEl.value.trim();
       if (!specText) { errorEl.hidden = false; errorEl.textContent = 'Đã bật dữ liệu sống ở chế độ JSON — cần nhập spec JSON.'; return; }
-      try { JSON.parse(specText); }
+      try { specObj = JSON.parse(specText); }
       catch (e) { errorEl.hidden = false; errorEl.textContent = 'JSON không hợp lệ: ' + e.message; return; }
     } else {
       if (!selectedTable) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn bảng dữ liệu nguồn cho dữ liệu sống.'; return; }
@@ -604,14 +702,22 @@ document.getElementById('upload-btn').onclick = async () => {
           return;
         }
       }
-      specText = JSON.stringify(spec);
+      specObj = spec;
     }
   }
 
+  if (editingEmbedId) {
+    await saveEdit(editingEmbedId, title, specObj, btn, resultEl);
+  } else {
+    await submitCreate(title, fileInput, specObj, btn, resultEl);
+  }
+};
+
+async function submitCreate(title, fileInput, specObj, btn, resultEl) {
   const formData = new FormData();
   formData.append('title', title);
   formData.append('file', fileInput.files[0]);
-  if (specText) formData.append('data_query_spec', specText);
+  if (specObj) formData.append('data_query_spec', JSON.stringify(specObj));
 
   setButtonBusy(btn, 'Đang upload...');
   try {
@@ -646,20 +752,14 @@ document.getElementById('upload-btn').onclick = async () => {
     document.getElementById('f-file').value = '';
     document.getElementById('live-toggle').checked = false;
     document.getElementById('live-data-panel').hidden = true;
-    document.getElementById('spec-table').value = '';
-    document.getElementById('spec-fields').hidden = true;
-    selectedTable = null;
-    advancedEl.value = '';
-    document.querySelector('input[name="spec-mode"][value="picker"]').checked = true;
-    document.getElementById('picker-mode').hidden = false;
-    document.getElementById('json-mode').hidden = true;
+    resetLiveDataFields();
 
     // Cập nhật lạc quan bằng chính dữ liệu vừa gửi lên — KHÔNG gọi loadEmbeds() ngay
     // vì BigQuery streaming insert cần vài giây mới SELECT lại thấy, gọi ngay dễ
     // khiến dashboard vừa tạo tạm thời "biến mất" khỏi danh sách, trông như lỗi.
     cachedEmbeds = [{
       embed_id: data.embed_id, title, created_by: devUser,
-      event_at: new Date().toISOString(), data_query_spec: specText ? {} : null,
+      event_at: new Date().toISOString(), data_query_spec: specObj,
     }, ...cachedEmbeds];
     renderEmbeds(cachedEmbeds);
   } catch (e) {
@@ -668,7 +768,28 @@ document.getElementById('upload-btn').onclick = async () => {
   } finally {
     clearButtonBusy(btn);
   }
-};
+}
+
+async function saveEdit(embedId, title, specObj, btn, resultEl) {
+  setButtonBusy(btn, 'Đang lưu...');
+  try {
+    const updated = await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}`, {
+      method: 'POST', body: JSON.stringify({title, data_query_spec: specObj}),
+    });
+    cachedEmbeds = cachedEmbeds.map(e => e.embed_id === embedId
+      ? {...e, title: updated.title, data_query_spec: updated.data_query_spec}
+      : e);
+    exitEditMode();
+    renderEmbeds(cachedEmbeds);
+    resultEl.className = 'success';
+    resultEl.textContent = '✅ Đã lưu thay đổi.';
+  } catch (e) {
+    resultEl.className = 'error';
+    resultEl.textContent = 'Lỗi lưu: ' + e.message;
+  } finally {
+    clearButtonBusy(btn);
+  }
+}
 
 (async function init() {
   try {

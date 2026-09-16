@@ -9,12 +9,14 @@ import json
 import secrets
 
 from api.catalog import get_bq_client
+from api.embed_view import invalidate_cache
 from auth.deps import get_current_user
 from config import Config
 from datasource import bq_meta
 from embeds import query_spec
 from embeds.gcs_store import upload_html
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
+from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 from storage import embeds_store
 
@@ -23,6 +25,20 @@ router = APIRouter(prefix="/api/embeds")
 
 def _is_whitelisted(user: str) -> bool:
     return user.strip().lower() in Config.UPLOAD_WHITELIST_EMAILS
+
+
+def _validate_spec(client, spec_dict: dict | None) -> tuple[dict | None, str | None]:
+    """Validate spec (nếu có) + trả về table_id suy ra từ spec, dùng chung cho cả
+    tạo mới lẫn sửa embed. Raise HTTPException 403/400 nếu spec sai."""
+    if not spec_dict:
+        return None, None
+    try:
+        plan = query_spec.build_query(client, spec_dict)
+    except bq_meta.OutOfScopeError as e:
+        raise HTTPException(403, str(e)) from e
+    except query_spec.InvalidQuerySpecError as e:
+        raise HTTPException(400, str(e)) from e
+    return spec_dict, plan.table_id
 
 
 @router.get("")
@@ -63,22 +79,15 @@ async def create_embed(
     client = get_bq_client()
 
     spec_dict = None
-    data_table_id = None
     if data_query_spec:
         try:
             spec_dict = json.loads(data_query_spec)
         except json.JSONDecodeError as e:
             raise HTTPException(400, f"data_query_spec không phải JSON hợp lệ: {e}") from e
-        try:
-            # Chỉ để VALIDATE spec ngay lúc upload (bắt lỗi sớm cho người upload) —
-            # SQL/QueryPlan build ra ở đây không dùng, endpoint /d/{id}/data sẽ tự
-            # build lại từ spec đã lưu để luôn theo schema/scope mới nhất.
-            plan = await run_in_threadpool(query_spec.build_query, client, spec_dict)
-        except bq_meta.OutOfScopeError as e:
-            raise HTTPException(403, str(e)) from e
-        except query_spec.InvalidQuerySpecError as e:
-            raise HTTPException(400, str(e)) from e
-        data_table_id = plan.table_id
+    # Chỉ để VALIDATE spec ngay lúc upload (bắt lỗi sớm) — SQL/QueryPlan build ra ở
+    # đây không dùng, endpoint /d/{id}/data sẽ tự build lại từ spec đã lưu để luôn
+    # theo schema/scope mới nhất.
+    spec_dict, data_table_id = await run_in_threadpool(_validate_spec, client, spec_dict)
 
     embed_id = secrets.token_urlsafe(16)
     gcs_path = f"embeds/{embed_id}.html"
@@ -94,11 +103,43 @@ async def create_embed(
     return {"embed_id": embed_id, "view_url": f"/d/{embed_id}"}
 
 
+class UpdateEmbedRequest(BaseModel):
+    title: str
+    data_query_spec: dict | None = None
+
+
+@router.post("/{embed_id}")
+def update_embed(embed_id: str, req: UpdateEmbedRequest, user: str = Depends(get_current_user)):
+    """Sửa tên/dữ liệu sống của embed đã tạo — KHÔNG đổi embed_id/link, KHÔNG đổi
+    file HTML (muốn đổi nội dung file thì thu hồi rồi upload lại). Ghi thêm 1 event
+    'updated' mang đủ mọi field (kể cả gcs_path giữ nguyên từ bản ghi hiện tại) —
+    đúng quy ước append-only, "current" luôn là bản ghi mới nhất theo embed_id."""
+    client = get_bq_client()
+    embed = embeds_store.get_current_embed(client, embed_id)
+    if embed is None or embed["event"] == "revoked":
+        raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
+    if embed["created_by"].strip().lower() != user.strip().lower() and not _is_whitelisted(user):
+        raise HTTPException(403, "Bạn không có quyền sửa embed này.")
+
+    title = req.title.strip()
+    if not title:
+        raise HTTPException(400, "Tên dashboard không được để trống.")
+    spec_dict, data_table_id = _validate_spec(client, req.data_query_spec)
+
+    embeds_store.insert_embed_event(
+        client, embed_id, "updated",
+        created_by=user, title=title, gcs_path=embed["gcs_path"],
+        data_table_id=data_table_id, data_query_spec=spec_dict,
+    )
+    invalidate_cache(embed_id)
+    return {"embed_id": embed_id, "title": title, "data_query_spec": spec_dict}
+
+
 @router.post("/{embed_id}/revoke")
 def revoke_embed(embed_id: str, user: str = Depends(get_current_user)):
     client = get_bq_client()
     embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] != "created":
+    if embed is None or embed["event"] == "revoked":
         raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
     if embed["created_by"].strip().lower() != user.strip().lower() and not _is_whitelisted(user):
         raise HTTPException(403, "Bạn không có quyền thu hồi embed này.")

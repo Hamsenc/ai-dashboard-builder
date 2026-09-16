@@ -75,7 +75,7 @@ def view_embed(embed_id: str):
     embed = embeds_store.get_current_embed(client, embed_id)
     if embed is None:
         raise HTTPException(404, "Không tìm thấy dashboard này.")
-    if embed["event"] != "created":
+    if embed["event"] == "revoked":
         raise HTTPException(410, "Dashboard này đã bị thu hồi.")
 
     html = download_html(embed["gcs_path"])
@@ -89,11 +89,20 @@ def view_embed(embed_id: str):
 _data_cache: dict[str, dict[str, Any]] = {}
 
 
+def invalidate_cache(embed_id: str) -> None:
+    """Gọi sau khi sửa spec của 1 embed (api/embeds.py update_embed) để viewer thấy
+    số liệu mới ngay, không phải đợi hết TTL. Chỉ xoá được cache của ĐÚNG instance
+    Cloud Run đang xử lý request sửa — nếu service chạy nhiều instance, các instance
+    khác vẫn có thể trả cache cũ tới khi tự hết EMBED_DATA_CACHE_TTL_SECONDS (chấp
+    nhận được, không phải ranh giới bảo mật, chỉ ảnh hưởng độ mới của số liệu)."""
+    _data_cache.pop(embed_id, None)
+
+
 @router.get("/{embed_id}/data")
 def get_embed_data(embed_id: str):
     client = get_bq_client()
     embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] != "created":
+    if embed is None or embed["event"] == "revoked":
         raise HTTPException(404, "Không tìm thấy dashboard này.")
     if not embed.get("data_query_spec"):
         raise HTTPException(404, "Dashboard này không có dữ liệu sống.")
