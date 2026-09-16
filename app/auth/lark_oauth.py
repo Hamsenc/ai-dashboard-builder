@@ -91,7 +91,12 @@ async def callback(request: Request, code: str | None = None, state: str | None 
     info = user_data["data"]
     session_payload = {
         "lark_user_id": info.get("open_id") or info.get("union_id"),
-        "email": info.get("email") or info.get("enterprise_email") or "",
+        # Ưu tiên enterprise_email (email công ty, gắn với tenant Lark) TRƯỚC email
+        # cá nhân — mọi thứ dùng "user" để phân quyền (UPLOAD_WHITELIST_EMAILS,
+        # audit trail) đều theo định danh email công ty. Thứ tự ngược lại (email
+        # cá nhân trước) từng khiến 1 tài khoản có email cá nhân Gmail đăng nhập
+        # được nhưng không khớp whitelist dù đúng người.
+        "email": info.get("enterprise_email") or info.get("email") or "",
         "name": info.get("name", ""),
     }
     session_token = create_session_token(session_payload)
