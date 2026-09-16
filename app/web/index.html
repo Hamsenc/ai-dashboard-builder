@@ -60,6 +60,13 @@
   #explorer-pane { flex: 1; padding: 28px 32px; overflow-y: auto; }
   #explorer-header { display:flex; align-items:center; justify-content:space-between; gap: 16px; margin-bottom: 18px; }
   #explorer-header h2 { font-size: 20px; font-weight: 650; margin: 0; }
+  #explorer-header-actions { display: flex; align-items: center; gap: 10px; }
+  #embeds-nav-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+    background: var(--series-1); color: #fff; font-weight: 600; font-size: 13px;
+    text-decoration: none; white-space: nowrap;
+  }
+  #embeds-nav-btn:hover { opacity: 0.9; }
   #whoami { font-size: 11px; color: var(--ink-muted); }
 
   #search-row { margin-bottom: 16px; }
@@ -185,7 +192,6 @@
     </div>
     <p>Mô tả báo cáo bạn muốn làm — mình gợi ý bảng dữ liệu phù hợp.</p>
     <p id="whoami"></p>
-    <p id="embeds-nav" hidden><a href="/embeds.html">Nhúng dashboard vào Lark →</a></p>
   </div>
   <div id="messages"></div>
   <div id="input-row">
@@ -198,7 +204,10 @@
   <div id="list-view">
     <div id="explorer-header">
       <h2 id="explorer-title">Bảng dữ liệu Serving</h2>
-      <button id="cancel-filter-btn" hidden>✕ Hủy lọc, xem tất cả bảng</button>
+      <div id="explorer-header-actions">
+        <a id="embeds-nav-btn" href="/embeds.html" hidden>📊 Nhúng dashboard vào Lark</a>
+        <button id="cancel-filter-btn" hidden>✕ Hủy lọc, xem tất cả bảng</button>
+      </div>
     </div>
     <p id="filter-reason" hidden></p>
     <div id="search-row">
@@ -249,7 +258,7 @@ async function initIdentity() {
       input.disabled = false;
       input.placeholder = 'Mô tả báo cáo bạn muốn làm...';
       document.getElementById('send-btn').disabled = false;
-      document.getElementById('embeds-nav').hidden = !me.can_upload_embed;
+      document.getElementById('embeds-nav-btn').hidden = !me.can_upload_embed;
       return;
     }
   } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }
