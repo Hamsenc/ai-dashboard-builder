@@ -181,7 +181,9 @@
     <div id="live-data-panel" hidden>
       <p class="hint" style="margin-top:0;">
         Trong file HTML, gọi <code>fetch('data')</code> lúc trang load để lấy JSON <code>{columns, rows}</code>
-        — app tự chèn <code>&lt;base&gt;</code> nên URL tương đối luôn trỏ đúng chỗ.
+        — app tự chèn <code>&lt;base&gt;</code> nên URL tương đối luôn trỏ đúng chỗ. Nếu dùng nhiều bảng (chế
+        độ JSON, tối đa 3 bảng/dashboard) thì <code>fetch('data')</code> trả về <code>{tên_bảng: {columns, rows}, ...}</code>
+        thay vì 1 object phẳng.
       </p>
 
       <div class="mode-tabs">
@@ -224,7 +226,7 @@
           </div>
 
           <div class="sub-label">Giới hạn số dòng trả về</div>
-          <input type="number" id="spec-limit" class="limit-row" value="500" min="1" max="1000" />
+          <input type="number" id="spec-limit" class="limit-row" value="500" min="1" max="10000" />
         </div>
       </div>
 
@@ -234,7 +236,12 @@
         <p class="hint">
           Không hỗ trợ SQL tự do — chỉ nhận spec JSON: <code>table_id</code>, <code>columns</code>,
           <code>aggregations[]</code> ({column, fn, alias}), <code>filters[]</code> ({column, op, value, type}),
-          <code>order_by[]</code> ({column, direction}), <code>limit</code>.
+          <code>order_by[]</code> ({column, direction}), <code>limit</code> (tối đa 10000, mặc định 500).
+        </p>
+        <p class="hint">
+          Cần dữ liệu từ nhiều bảng trong cùng 1 dashboard? Bọc các spec trên vào 1 object
+          <code>{"specs": {"tên_1": {...}, "tên_2": {...}}}</code> — tối đa 3 bảng, mỗi spec con vẫn theo đúng cấu
+          trúc ở trên (chỉ đặt tên khác nhau cho từng cái). Chỉ hỗ trợ ở chế độ JSON này, dropdown chỉ chọn được 1 bảng.
         </p>
       </div>
     </div>
@@ -555,7 +562,15 @@ async function enterEditMode(embed) {
   if (embed.data_query_spec) {
     document.getElementById('live-toggle').checked = true;
     document.getElementById('live-data-panel').hidden = false;
-    await loadSpecIntoPicker(embed.data_query_spec);
+    if (embed.data_query_spec.specs) {
+      // Spec nhiều bảng -> dropdown chỉ đại diện được 1 bảng, mở thẳng chế độ JSON.
+      document.querySelector('input[name="spec-mode"][value="json"]').checked = true;
+      document.getElementById('picker-mode').hidden = true;
+      document.getElementById('json-mode').hidden = false;
+      document.getElementById('f-spec-advanced').value = JSON.stringify(embed.data_query_spec, null, 2);
+    } else {
+      await loadSpecIntoPicker(embed.data_query_spec);
+    }
   }
 
   document.querySelector('.card').scrollIntoView({behavior: 'smooth', block: 'start'});

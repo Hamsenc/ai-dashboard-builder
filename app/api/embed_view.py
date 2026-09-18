@@ -98,6 +98,18 @@ def invalidate_cache(embed_id: str) -> None:
     _data_cache.pop(embed_id, None)
 
 
+def _run_plan(client, plan: query_spec.QueryPlan) -> dict[str, Any]:
+    result = bq_client.execute(
+        client, plan.sql,
+        max_bytes_billed=Config.EMBED_DATA_MAX_BYTES_BILLED,
+        query_parameters=plan.query_parameters,
+    )
+    return {
+        "columns": result.columns,
+        "rows": [{k: _serialize_value(v) for k, v in row.items()} for row in result.rows],
+    }
+
+
 @router.get("/{embed_id}/data")
 def get_embed_data(embed_id: str):
     client = get_bq_client()
@@ -112,25 +124,24 @@ def get_embed_data(embed_id: str):
     if cached and (now - cached["loaded_at"]) < Config.EMBED_DATA_CACHE_TTL_SECONDS:
         return cached["result"]
 
+    spec_dict = embed["data_query_spec"]
     try:
         # Build lại từ spec đã lưu (không dùng bản build lúc upload) để luôn theo
         # schema/scope MỚI NHẤT — an toàn nếu bảng nguồn đổi cột hoặc bị rút khỏi
         # SERVING_DATASETS sau khi embed đã tạo.
-        plan = query_spec.build_query(client, embed["data_query_spec"])
+        if query_spec.is_multi_spec(spec_dict):
+            # Spec nhiều bảng (mới) -> payload {tên: {columns, rows}}. Spec 1 bảng
+            # (cũ, embed tạo trước tính năng này) -> payload {columns, rows} phẳng
+            # như trước giờ, để KHÔNG bể các dashboard đã upload/nhúng Lark từ trước.
+            plans = query_spec.build_queries(client, spec_dict)
+            payload = {name: _run_plan(client, plan) for name, plan in plans.items()}
+        else:
+            plan = query_spec.build_query(client, spec_dict)
+            payload = _run_plan(client, plan)
     except bq_meta.OutOfScopeError as e:
         raise HTTPException(403, str(e)) from e
     except query_spec.InvalidQuerySpecError as e:
         raise HTTPException(400, str(e)) from e
-
-    result = bq_client.execute(
-        client, plan.sql,
-        max_bytes_billed=Config.EMBED_DATA_MAX_BYTES_BILLED,
-        query_parameters=plan.query_parameters,
-    )
-    payload = {
-        "columns": result.columns,
-        "rows": [{k: _serialize_value(v) for k, v in row.items()} for row in result.rows],
-    }
 
     _data_cache[embed_id] = {"loaded_at": now, "result": payload}
     return payload

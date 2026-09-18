@@ -28,7 +28,8 @@ _ORDER_DIR = {"asc": "ASC", "desc": "DESC"}
 _FILTER_TYPES = {"STRING", "INT64", "FLOAT64", "BOOL", "DATE", "TIMESTAMP"}
 
 _DEFAULT_LIMIT = 500
-_MAX_LIMIT = 1000
+_MAX_LIMIT = 10000
+_MAX_SPECS = 3
 
 
 class InvalidQuerySpecError(ValueError):
@@ -131,6 +132,31 @@ def build_query(client: bigquery.Client, spec: dict[str, Any]) -> QueryPlan:
 
     _assert_single_select(sql)
     return QueryPlan(table_id=table_id, sql=sql, query_parameters=query_parameters)
+
+
+def is_multi_spec(spec_dict: dict[str, Any]) -> bool:
+    """True nếu spec ở dạng nhiều bảng {"specs": {tên: spec, ...}} thay vì 1 spec
+    phẳng cũ (table_id nằm trực tiếp ở top-level) — dùng để phân biệt tường minh
+    với embed cũ đã tạo trước khi có tính năng nhiều bảng, không đoán qua shape."""
+    return isinstance(spec_dict, dict) and "specs" in spec_dict
+
+
+def build_queries(client: bigquery.Client, spec_dict: dict[str, Any]) -> dict[str, QueryPlan]:
+    """Validate + build SQL cho spec nhiều bảng {"specs": {tên: spec, ...}}, tối đa
+    _MAX_SPECS bảng/embed. Mỗi spec con validate độc lập y hệt build_query() (vẫn
+    chỉ 1 bảng/spec con) — chỉ khác là 1 embed giờ gom được nhiều spec như vậy."""
+    _require(isinstance(spec_dict, dict), "data_query_spec phải là 1 object JSON.")
+    specs = spec_dict.get("specs")
+    _require(isinstance(specs, dict) and len(specs) > 0, "specs phải là 1 object không rỗng dạng {tên: spec}.")
+    _require(len(specs) <= _MAX_SPECS, f"Tối đa {_MAX_SPECS} bảng dữ liệu sống cho 1 dashboard.")
+    plans: dict[str, QueryPlan] = {}
+    for name, sub_spec in specs.items():
+        _require(
+            isinstance(name, str) and _ALIAS_RE.match(name),
+            f"Tên dataset '{name}' không hợp lệ — chỉ chữ/số/gạch dưới, không bắt đầu bằng số.",
+        )
+        plans[name] = build_query(client, sub_spec)
+    return plans
 
 
 def _assert_single_select(sql: str) -> None:

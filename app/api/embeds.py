@@ -28,17 +28,24 @@ def _is_whitelisted(user: str) -> bool:
 
 
 def _validate_spec(client, spec_dict: dict | None) -> tuple[dict | None, str | None]:
-    """Validate spec (nếu có) + trả về table_id suy ra từ spec, dùng chung cho cả
-    tạo mới lẫn sửa embed. Raise HTTPException 403/400 nếu spec sai."""
+    """Validate spec (nếu có) + trả về (các) table_id suy ra từ spec, dùng chung cho
+    cả tạo mới lẫn sửa embed. Hỗ trợ cả spec 1 bảng cũ lẫn spec nhiều bảng mới
+    ({"specs": {tên: spec, ...}}, xem query_spec.is_multi_spec). Raise HTTPException
+    403/400 nếu spec sai."""
     if not spec_dict:
         return None, None
     try:
-        plan = query_spec.build_query(client, spec_dict)
+        if query_spec.is_multi_spec(spec_dict):
+            plans = query_spec.build_queries(client, spec_dict)
+            table_id = ", ".join(sorted({p.table_id for p in plans.values()}))
+        else:
+            plan = query_spec.build_query(client, spec_dict)
+            table_id = plan.table_id
     except bq_meta.OutOfScopeError as e:
         raise HTTPException(403, str(e)) from e
     except query_spec.InvalidQuerySpecError as e:
         raise HTTPException(400, str(e)) from e
-    return spec_dict, plan.table_id
+    return spec_dict, table_id
 
 
 @router.get("")

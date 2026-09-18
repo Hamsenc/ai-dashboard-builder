@@ -9,8 +9,11 @@ CREATE TABLE IF NOT EXISTS `surya-495408.12_data_agent_log.raw_dashboard_builder
   created_by      STRING NOT NULL,   -- email người thao tác (upload/sửa/thu hồi)
   gcs_path        STRING,            -- blob path HTML trong EMBEDS_GCS_BUCKET; 'updated' mang lại nguyên
                                       -- giá trị cũ (không đổi file), NULL khi event='revoked'
-  data_table_id   STRING,            -- project.dataset.table nguồn cho query sống, NULL nếu dashboard tĩnh
-  data_query_spec JSON,              -- spec truy vấn đã validate (xem app/embeds/query_spec.py), NULL nếu tĩnh
+  data_table_id   STRING,            -- (các) project.dataset.table nguồn cho query sống, nối bằng ", " nếu
+                                      -- data_query_spec là dạng nhiều bảng; NULL nếu dashboard tĩnh
+  data_query_spec JSON,              -- spec truy vấn đã validate (xem app/embeds/query_spec.py) — dạng cũ 1
+                                      -- bảng (table_id ở top-level) hoặc dạng mới nhiều bảng, tối đa 3
+                                      -- ({"specs": {tên: spec, ...}}); NULL nếu tĩnh
   event_at        TIMESTAMP NOT NULL
 )
 PARTITION BY DATE(event_at)
