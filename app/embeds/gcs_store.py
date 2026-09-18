@@ -25,3 +25,14 @@ def upload_html(gcs_path: str, html: str) -> None:
 def download_html(gcs_path: str) -> str:
     bucket = _get_client().bucket(Config.EMBEDS_GCS_BUCKET)
     return bucket.blob(gcs_path).download_as_text()
+
+
+def upload_bytes(gcs_path: str, content: bytes, content_type: str) -> None:
+    """Dùng cho file dữ liệu (Excel/CSV) — nhị phân, khác upload_html() vốn chỉ nhận text."""
+    bucket = _get_client().bucket(Config.EMBEDS_GCS_BUCKET)
+    bucket.blob(gcs_path).upload_from_string(content, content_type=content_type)
+
+
+def download_bytes(gcs_path: str) -> bytes:
+    bucket = _get_client().bucket(Config.EMBEDS_GCS_BUCKET)
+    return bucket.blob(gcs_path).download_as_bytes()

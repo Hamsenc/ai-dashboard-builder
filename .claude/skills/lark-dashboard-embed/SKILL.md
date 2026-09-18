@@ -292,6 +292,35 @@ Nếu vẫn cần vượt quá 3 bảng (pattern nhiều embed ở Bước 4), s
 
 Lưu ý cache: metadata cột của app có TTL cache 10 phút (`app/datasource/bq_meta.py`). Nếu vừa tạo/sửa view ở Bước 2, đợi ít nhất ~10 phút trước khi user upload spec dùng cột mới, nếu không sẽ gặp lỗi "cột không tồn tại" dù cột đã có thật — không phải bug, chỉ cần đợi rồi thử lại.
 
+## Bước 5b — Dữ liệu sống bằng file thay vì BigQuery
+
+Dùng khi dữ liệu KHÔNG nằm trong BigQuery — user tự theo dõi bằng 1 file Excel/CSV riêng
+(ngoài phạm vi Serving) và muốn dashboard tự cập nhật số mỗi khi họ tải file mới lên, không
+cần đổi link. Đây là lựa chọn thay thế cho `data_query_spec` (Bước 5), KHÔNG dùng chung 1
+embed với BigQuery — 1 dashboard chỉ chọn 1 trong 2 nguồn.
+
+Server chỉ lưu/host lại nguyên file, KHÔNG parse gì cả — dashboard tự đọc bằng SheetJS y hệt
+cách 2 dashboard mẫu tham khảo (Marketing Operations, Supply Chain Management) đã đọc file
+user chọn tay, chỉ khác là fetch từ URL cố định thay vì chờ người xem tự bấm nút Upload:
+
+```js
+fetch('data-file')                       // URL tương đối, app tự chèn <base> đúng chỗ
+  .then(r => r.arrayBuffer())
+  .then(buf => {
+    var wb = XLSX.read(buf, { type: 'array' });
+    var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { raw: true });
+    renderDashboard(rows);
+  });
+```
+
+Nếu muốn giữ luôn màn hình "Upload Excel" thủ công cho lần đầu (chưa có file trên server) thì
+gọi `fetch('data-file')` trước, bắt lỗi 404 rồi fallback về UI chọn file tay như bình thường.
+
+Giao cho user: đưa file HTML, dặn khi upload ở `/embeds.html` chọn chế độ dữ liệu sống
+**"📄 File Excel/CSV"** (thay vì "🗄️ Bảng BigQuery") và chọn file dữ liệu mẫu cùng lúc. Sau
+này cần cập nhật số liệu, họ chỉ cần bấm "✏️ Sửa" → chọn lại file dữ liệu mới ở đúng ô đó →
+Lưu — link không đổi.
+
 ## Bước 6 — Giao sản phẩm cho user
 
 Trả lời user gồm:

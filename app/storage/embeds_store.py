@@ -37,6 +37,10 @@ def insert_embed_event(
     gcs_path: str | None = None,
     data_table_id: str | None = None,
     data_query_spec: dict[str, Any] | None = None,
+    owner_name: str | None = None,
+    prompt_note: str | None = None,
+    data_file_gcs_path: str | None = None,
+    data_file_name: str | None = None,
 ) -> None:
     row = {
         "embed_id": embed_id,
@@ -46,6 +50,10 @@ def insert_embed_event(
         "gcs_path": gcs_path,
         "data_table_id": data_table_id,
         "data_query_spec": json.dumps(data_query_spec, ensure_ascii=False) if data_query_spec else None,
+        "owner_name": owner_name,
+        "prompt_note": prompt_note,
+        "data_file_gcs_path": data_file_gcs_path,
+        "data_file_name": data_file_name,
         "event_at": _now(),
     }
     table_id = _table("embeds")

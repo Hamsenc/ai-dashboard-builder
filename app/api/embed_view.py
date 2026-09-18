@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime
 import decimal
+import mimetypes
 import re
 import time
 from typing import Any
@@ -15,9 +16,9 @@ from api.catalog import get_bq_client
 from config import Config
 from datasource import bq_meta
 from embeds import query_spec
-from embeds.gcs_store import download_html
+from embeds.gcs_store import download_bytes, download_html
 from execution import bq_client
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import HTMLResponse
 from storage import embeds_store
 
@@ -81,6 +82,22 @@ def view_embed(embed_id: str):
     html = download_html(embed["gcs_path"])
     html = _inject_base_tag(html, embed_id)
     return HTMLResponse(html)
+
+
+@router.get("/{embed_id}/data-file")
+def get_embed_data_file(embed_id: str):
+    """File Excel/CSV user tự tải lên làm dữ liệu sống — server không parse, chỉ host
+    lại nguyên bytes; dashboard tự đọc bằng SheetJS (xem .claude/skills/lark-dashboard-embed)."""
+    client = get_bq_client()
+    embed = embeds_store.get_current_embed(client, embed_id)
+    if embed is None or embed["event"] == "revoked":
+        raise HTTPException(404, "Không tìm thấy dashboard này.")
+    if not embed.get("data_file_gcs_path"):
+        raise HTTPException(404, "Dashboard này không có file dữ liệu.")
+
+    content = download_bytes(embed["data_file_gcs_path"])
+    content_type = mimetypes.guess_type(embed.get("data_file_name") or "")[0] or "application/octet-stream"
+    return Response(content=content, media_type=content_type)
 
 
 # Cache in-process kết quả query sống theo embed_id — dashboard chỉ load lại lúc

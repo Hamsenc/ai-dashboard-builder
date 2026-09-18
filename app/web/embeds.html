@@ -72,7 +72,7 @@
   .toggle-row-text .toggle-title { font-size: 13.5px; font-weight: 600; }
   .toggle-row-text .toggle-desc { font-size: 12px; color: var(--ink-muted); margin-top: 2px; line-height: 1.45; }
 
-  #live-data-panel {
+  .live-data-panel {
     margin-top: 16px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 10px;
     background: var(--surface-2);
   }
@@ -163,22 +163,39 @@
     <input type="text" id="f-title" placeholder="VD: Báo cáo doanh thu tuần" />
   </div>
 
+  <div class="field">
+    <label class="field-label" for="f-owner-name">Tên người tạo (tùy chọn)</label>
+    <input type="text" id="f-owner-name" placeholder="VD: Nguyễn Văn A" />
+  </div>
+
+  <div class="field">
+    <label class="field-label" for="f-prompt-note">Ghi chú prompt / cấu trúc dữ liệu (tùy chọn)</label>
+    <textarea id="f-prompt-note" style="min-height:70px; font-family:inherit;" placeholder="Prompt đã dùng để Claude tạo dashboard này, hoặc mô tả cột/schema file dữ liệu — giúp tra cứu lại sau này."></textarea>
+  </div>
+
   <div class="field" id="file-field">
     <label class="field-label" for="f-file">File HTML</label>
     <input type="file" id="f-file" accept=".html,text/html" />
   </div>
 
   <div class="field">
-    <label class="toggle-row">
-      <input type="checkbox" id="live-toggle" />
-      <span class="toggle-row-text">
-        <span class="toggle-title">Bật dữ liệu sống</span>
-        <span class="toggle-desc">Dashboard tự lấy số liệu mới mỗi lần mở trang hoặc bấm refresh (thay vì
-          số liệu cố định lúc AI tạo dashboard). Chỉ đọc được bảng trong phạm vi dữ liệu Serving đã cấp quyền.</span>
-      </span>
-    </label>
+    <label class="field-label">Dữ liệu sống</label>
+    <div class="mode-tabs">
+      <label class="mode-tab">
+        <input type="radio" name="data-mode" value="none" checked />
+        Không có
+      </label>
+      <label class="mode-tab">
+        <input type="radio" name="data-mode" value="bigquery" />
+        🗄️ Bảng BigQuery
+      </label>
+      <label class="mode-tab">
+        <input type="radio" name="data-mode" value="datafile" />
+        📄 File Excel/CSV
+      </label>
+    </div>
 
-    <div id="live-data-panel" hidden>
+    <div id="bigquery-data-panel" class="live-data-panel" hidden>
       <p class="hint" style="margin-top:0;">
         Trong file HTML, gọi <code>fetch('data')</code> lúc trang load để lấy JSON <code>{columns, rows}</code>
         — app tự chèn <code>&lt;base&gt;</code> nên URL tương đối luôn trỏ đúng chỗ. Nếu dùng nhiều bảng (chế
@@ -243,6 +260,21 @@
           <code>{"specs": {"tên_1": {...}, "tên_2": {...}}}</code> — tối đa 3 bảng, mỗi spec con vẫn theo đúng cấu
           trúc ở trên (chỉ đặt tên khác nhau cho từng cái). Chỉ hỗ trợ ở chế độ JSON này, dropdown chỉ chọn được 1 bảng.
         </p>
+      </div>
+    </div>
+
+    <div id="datafile-data-panel" class="live-data-panel" hidden>
+      <p class="hint" style="margin-top:0;">
+        Dùng khi dữ liệu KHÔNG nằm trong BigQuery (VD: file Excel/CSV bạn tự theo dõi). Server chỉ lưu lại
+        nguyên file, không đọc/parse gì cả — trong file HTML, gọi <code>fetch('data-file')</code> lúc trang
+        load để lấy file gốc rồi tự đọc bằng SheetJS:
+        <code>fetch('data-file').then(r=&gt;r.arrayBuffer()).then(buf=&gt;XLSX.read(buf,{type:'array'}))</code>.
+        Sau này cần cập nhật số liệu, chỉ cần tải file mới lên đây — không cần đổi link/HTML.
+      </p>
+      <div class="field" id="data-file-field" style="margin-bottom:0;">
+        <label class="field-label" for="f-data-file">File dữ liệu (.xlsx, .xls, .csv)</label>
+        <input type="file" id="f-data-file" accept=".xlsx,.xls,.csv" />
+        <div class="hint" id="data-file-current"></div>
       </div>
     </div>
   </div>
@@ -342,9 +374,19 @@ async function ensureTablesLoaded() {
   }
 }
 
-document.getElementById('live-toggle').addEventListener('change', async (e) => {
-  document.getElementById('live-data-panel').hidden = !e.target.checked;
-  if (e.target.checked) await ensureTablesLoaded();
+function currentDataMode() {
+  return document.querySelector('input[name="data-mode"]:checked').value;
+}
+
+async function applyDataModeVisibility() {
+  const mode = currentDataMode();
+  document.getElementById('bigquery-data-panel').hidden = mode !== 'bigquery';
+  document.getElementById('datafile-data-panel').hidden = mode !== 'datafile';
+  if (mode === 'bigquery') await ensureTablesLoaded();
+}
+
+document.querySelectorAll('input[name="data-mode"]').forEach(radio => {
+  radio.addEventListener('change', applyDataModeVisibility);
 });
 
 function selectTable(tableId) {
@@ -513,6 +555,12 @@ document.querySelectorAll('input[name="spec-mode"]').forEach(radio => {
 });
 
 function resetLiveDataFields() {
+  document.querySelector('input[name="data-mode"][value="none"]').checked = true;
+  document.getElementById('bigquery-data-panel').hidden = true;
+  document.getElementById('datafile-data-panel').hidden = true;
+  document.getElementById('f-data-file').value = '';
+  document.getElementById('data-file-current').textContent = '';
+
   document.getElementById('spec-table').value = '';
   document.getElementById('spec-fields').hidden = true;
   selectedTable = null;
@@ -551,17 +599,17 @@ async function enterEditMode(embed) {
   document.getElementById('edit-banner-title').textContent = embed.title || '(không có tên)';
   document.getElementById('edit-banner').hidden = false;
   document.getElementById('f-title').value = embed.title || '';
+  document.getElementById('f-owner-name').value = embed.owner_name || '';
+  document.getElementById('f-prompt-note').value = embed.prompt_note || '';
   document.getElementById('upload-btn').textContent = 'Lưu thay đổi';
   document.getElementById('upload-result').className = ''; document.getElementById('upload-result').innerHTML = '';
   document.getElementById('form-error').hidden = true;
 
-  document.getElementById('live-toggle').checked = false;
-  document.getElementById('live-data-panel').hidden = true;
   resetLiveDataFields();
 
   if (embed.data_query_spec) {
-    document.getElementById('live-toggle').checked = true;
-    document.getElementById('live-data-panel').hidden = false;
+    document.querySelector('input[name="data-mode"][value="bigquery"]').checked = true;
+    document.getElementById('bigquery-data-panel').hidden = false;
     if (embed.data_query_spec.specs) {
       // Spec nhiều bảng -> dropdown chỉ đại diện được 1 bảng, mở thẳng chế độ JSON.
       document.querySelector('input[name="spec-mode"][value="json"]').checked = true;
@@ -571,6 +619,11 @@ async function enterEditMode(embed) {
     } else {
       await loadSpecIntoPicker(embed.data_query_spec);
     }
+  } else if (embed.data_file_gcs_path) {
+    document.querySelector('input[name="data-mode"][value="datafile"]').checked = true;
+    document.getElementById('datafile-data-panel').hidden = false;
+    document.getElementById('data-file-current').textContent =
+      `Đang dùng: ${embed.data_file_name || '(không rõ tên file)'} — chọn file mới bên dưới để thay, hoặc để trống nếu không đổi.`;
   }
 
   document.querySelector('.card').scrollIntoView({behavior: 'smooth', block: 'start'});
@@ -583,9 +636,9 @@ function exitEditMode() {
   document.getElementById('edit-banner').hidden = true;
   document.getElementById('upload-btn').textContent = 'Upload';
   document.getElementById('f-title').value = '';
+  document.getElementById('f-owner-name').value = '';
+  document.getElementById('f-prompt-note').value = '';
   document.getElementById('f-file').value = '';
-  document.getElementById('live-toggle').checked = false;
-  document.getElementById('live-data-panel').hidden = true;
   resetLiveDataFields();
 }
 
@@ -647,14 +700,30 @@ function renderEmbeds(embeds) {
     if (embed.data_query_spec) {
       const badge = document.createElement('span');
       badge.className = 'live-badge';
-      badge.textContent = 'Dữ liệu sống';
+      badge.textContent = 'Dữ liệu sống (BigQuery)';
+      title.appendChild(badge);
+    }
+    if (embed.data_file_gcs_path) {
+      const badge = document.createElement('span');
+      badge.className = 'live-badge';
+      badge.textContent = 'File dữ liệu';
       title.appendChild(badge);
     }
     const meta = document.createElement('div');
     meta.className = 'embed-row-meta';
-    meta.textContent = `${embed.created_by} · ${new Date(embed.event_at).toLocaleString('vi-VN')}`;
+    const metaParts = [embed.created_by];
+    if (embed.owner_name) metaParts.push(embed.owner_name);
+    metaParts.push(new Date(embed.event_at).toLocaleString('vi-VN'));
+    meta.textContent = metaParts.join(' · ');
     main.appendChild(title);
     main.appendChild(meta);
+    if (embed.prompt_note) {
+      const note = document.createElement('div');
+      note.className = 'embed-row-meta';
+      note.style.whiteSpace = 'pre-wrap';
+      note.textContent = embed.prompt_note; // untrusted content -> textContent
+      main.appendChild(note);
+    }
 
     const link = document.createElement('a');
     link.href = `/d/${embed.embed_id}`;
@@ -705,18 +774,24 @@ document.getElementById('upload-btn').onclick = async () => {
   errorEl.hidden = true;
 
   const title = document.getElementById('f-title').value.trim();
+  const ownerName = document.getElementById('f-owner-name').value.trim();
+  const promptNote = document.getElementById('f-prompt-note').value.trim();
   const fileInput = document.getElementById('f-file');
-  const liveOn = document.getElementById('live-toggle').checked;
+  const dataFileInput = document.getElementById('f-data-file');
+  const dataMode = currentDataMode();
   const advancedEl = document.getElementById('f-spec-advanced');
 
   if (!title) { errorEl.hidden = false; errorEl.textContent = 'Cần nhập tên dashboard.'; return; }
   if (!editingEmbedId && !fileInput.files[0]) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn 1 file HTML.'; return; }
+  if (!editingEmbedId && dataMode === 'datafile' && !dataFileInput.files[0]) {
+    errorEl.hidden = false; errorEl.textContent = 'Cần chọn file dữ liệu (.xlsx/.xls/.csv).'; return;
+  }
 
   let specObj = null;
-  if (liveOn) {
+  if (dataMode === 'bigquery') {
     if (currentSpecMode() === 'json') {
       const specText = advancedEl.value.trim();
-      if (!specText) { errorEl.hidden = false; errorEl.textContent = 'Đã bật dữ liệu sống ở chế độ JSON — cần nhập spec JSON.'; return; }
+      if (!specText) { errorEl.hidden = false; errorEl.textContent = 'Đã chọn nguồn BigQuery ở chế độ JSON — cần nhập spec JSON.'; return; }
       try { specObj = JSON.parse(specText); }
       catch (e) { errorEl.hidden = false; errorEl.textContent = 'JSON không hợp lệ: ' + e.message; return; }
     } else {
@@ -736,18 +811,23 @@ document.getElementById('upload-btn').onclick = async () => {
     }
   }
 
+  const dataFile = dataMode === 'datafile' ? dataFileInput.files[0] : null;
+
   if (editingEmbedId) {
-    await saveEdit(editingEmbedId, title, specObj, btn, resultEl);
+    await saveEdit(editingEmbedId, title, ownerName, promptNote, specObj, dataFile, btn, resultEl);
   } else {
-    await submitCreate(title, fileInput, specObj, btn, resultEl);
+    await submitCreate(title, ownerName, promptNote, fileInput, specObj, dataFile, btn, resultEl);
   }
 };
 
-async function submitCreate(title, fileInput, specObj, btn, resultEl) {
+async function submitCreate(title, ownerName, promptNote, fileInput, specObj, dataFile, btn, resultEl) {
   const formData = new FormData();
   formData.append('title', title);
   formData.append('file', fileInput.files[0]);
+  if (ownerName) formData.append('owner_name', ownerName);
+  if (promptNote) formData.append('prompt_note', promptNote);
   if (specObj) formData.append('data_query_spec', JSON.stringify(specObj));
+  if (dataFile) formData.append('data_file', dataFile);
 
   setButtonBusy(btn, 'Đang upload...');
   try {
@@ -779,17 +859,18 @@ async function submitCreate(title, fileInput, specObj, btn, resultEl) {
     resultEl.appendChild(row);
 
     document.getElementById('f-title').value = '';
+    document.getElementById('f-owner-name').value = '';
+    document.getElementById('f-prompt-note').value = '';
     document.getElementById('f-file').value = '';
-    document.getElementById('live-toggle').checked = false;
-    document.getElementById('live-data-panel').hidden = true;
     resetLiveDataFields();
 
     // Cập nhật lạc quan bằng chính dữ liệu vừa gửi lên — KHÔNG gọi loadEmbeds() ngay
     // vì BigQuery streaming insert cần vài giây mới SELECT lại thấy, gọi ngay dễ
     // khiến dashboard vừa tạo tạm thời "biến mất" khỏi danh sách, trông như lỗi.
     cachedEmbeds = [{
-      embed_id: data.embed_id, title, created_by: devUser,
+      embed_id: data.embed_id, title, created_by: devUser, owner_name: ownerName, prompt_note: promptNote,
       event_at: new Date().toISOString(), data_query_spec: specObj,
+      data_file_gcs_path: dataFile ? 'pending' : null, data_file_name: dataFile ? dataFile.name : null,
     }, ...cachedEmbeds];
     renderEmbeds(cachedEmbeds);
   } catch (e) {
@@ -800,14 +881,32 @@ async function submitCreate(title, fileInput, specObj, btn, resultEl) {
   }
 }
 
-async function saveEdit(embedId, title, specObj, btn, resultEl) {
+async function saveEdit(embedId, title, ownerName, promptNote, specObj, dataFile, btn, resultEl) {
   setButtonBusy(btn, 'Đang lưu...');
   try {
     const updated = await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}`, {
-      method: 'POST', body: JSON.stringify({title, data_query_spec: specObj}),
+      method: 'POST', body: JSON.stringify({title, data_query_spec: specObj, owner_name: ownerName, prompt_note: promptNote}),
     });
+    let dataFileName = cachedEmbeds.find(e => e.embed_id === embedId)?.data_file_name || null;
+    if (dataFile) {
+      // Endpoint riêng vì update_embed() nhận JSON, không mang được multipart file.
+      const fd = new FormData();
+      fd.append('data_file', dataFile);
+      const res = await fetch(`/api/embeds/${encodeURIComponent(embedId)}/data-file`, {
+        method: 'POST', headers: {'X-Dev-User': devUser}, body: fd,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = text;
+        try { const parsed = JSON.parse(text); if (parsed && typeof parsed.detail === 'string') message = parsed.detail; } catch (e) {}
+        throw new Error('Lưu tên/spec thành công nhưng lỗi upload file dữ liệu: ' + message);
+      }
+      dataFileName = (await res.json()).data_file_name;
+    }
     cachedEmbeds = cachedEmbeds.map(e => e.embed_id === embedId
-      ? {...e, title: updated.title, data_query_spec: updated.data_query_spec}
+      ? {...e, title: updated.title, data_query_spec: updated.data_query_spec,
+         owner_name: ownerName, prompt_note: promptNote,
+         data_file_name: dataFileName, data_file_gcs_path: dataFileName ? (e.data_file_gcs_path || 'pending') : null}
       : e);
     exitEditMode();
     renderEmbeds(cachedEmbeds);

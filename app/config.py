@@ -44,6 +44,9 @@ class Config:
         if e.strip()
     ]
     EMBED_MAX_HTML_BYTES = int(os.environ.get("EMBED_MAX_HTML_BYTES", str(2 * 1024 * 1024)))
+    # File dữ liệu (Excel/CSV) user tự tải lên làm nguồn "dữ liệu sống" thay BigQuery —
+    # thường lớn hơn hẳn file HTML nên cap riêng, mặc định 10MB.
+    EMBED_MAX_DATA_FILE_BYTES = int(os.environ.get("EMBED_MAX_DATA_FILE_BYTES", str(10 * 1024 * 1024)))
     # Ngưỡng bytes riêng cho query sống của embed (khác BQ_MAX_BYTES_BILLED chung) vì
     # đây là endpoint PUBLIC không cần đăng nhập — 1 link lộ ra ngoài không được phép
     # kéo theo chi phí BigQuery lớn. execution.bq_client.execute() enforce ngưỡng này.
