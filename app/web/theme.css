@@ -1,17 +1,18 @@
-/* Design token + base reset dùng chung cho app (index.html) và preview harness
-   (preview/index.html). Đây là NGUỒN THẬT của bảng màu — sửa ở đây, không copy. */
+/* Design token + base reset dùng chung cho index.html và embeds.html — 2 trang DUY
+   NHẤT còn dùng file này (preview harness cũ đã xoá từ đợt data-explorer-pivot).
+   Đây là NGUỒN THẬT của bảng màu — sửa ở đây, không copy. */
 
 :root {
   color-scheme: light;
-  --page:            #f9f9f7;
-  --surface:         #fcfcfb;
-  --surface-2:       #f3f2ee;
-  --ink-primary:     #0b0b0b;
-  --ink-secondary:   #52514e;
-  --ink-muted:       #898781;
+  --page:            #f0f4f8;
+  --surface:         #ffffff;
+  --surface-2:       #f1eefc;
+  --ink-primary:     #1e293b;
+  --ink-secondary:   #475569;
+  --ink-muted:       #94a3b8;
   --gridline:        #e1e0d9;
   --baseline:        #c3c2b7;
-  --series-1:        #2a78d6;
+  --series-1:        #7c3aed;
   --series-2:        #eb6834;
   --series-3:        #1baf7a;
   --series-4:        #eda100;
@@ -24,26 +25,26 @@
   --series-11:       #a03fa0;
   --series-12:       #66762c;
   --series-rollup:   #9a988f;
-  --series-1-wash:   rgba(42,120,214,0.10);
-  --good:            #006300;
-  --critical:        #d03b3b;
-  --warning-bg:      #fab219;
-  --warning-ink:     #3a2a00;
-  --border:          rgba(11,11,11,0.10);
-  --user-bubble:     #e7effb;
+  --series-1-wash:   rgba(124,58,237,0.10);
+  --good:            #059669;
+  --critical:        #e11d48;
+  --warning-bg:      #fde68a;
+  --warning-ink:     #78350f;
+  --border:          #e2e8f0;
+  --user-bubble:     #ede9fe;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --page:            #0d0d0d;
-    --surface:         #1a1a19;
-    --surface-2:       #232322;
-    --ink-primary:     #ffffff;
-    --ink-secondary:   #c3c2b7;
-    --ink-muted:       #898781;
+    --page:            #131120;
+    --surface:         #1c1a2b;
+    --surface-2:       #262336;
+    --ink-primary:     #f5f3ff;
+    --ink-secondary:   #c4bfe0;
+    --ink-muted:       #8b84ab;
     --gridline:        #2c2c2a;
     --baseline:        #383835;
-    --series-1:        #3987e5;
+    --series-1:        #a78bfa;
     --series-2:        #d95926;
     --series-3:        #199e70;
     --series-4:        #c98500;
@@ -56,26 +57,26 @@
     --series-11:       #c563c5;
     --series-12:       #93a63f;
     --series-rollup:   #6e6c66;
-    --series-1-wash:   rgba(57,135,229,0.16);
-    --good:            #0ca30c;
-    --critical:        #e66767;
-    --warning-bg:      #c98500;
-    --warning-ink:     #0b0b0b;
+    --series-1-wash:   rgba(167,139,250,0.18);
+    --good:            #34d399;
+    --critical:        #fb7185;
+    --warning-bg:      #b45309;
+    --warning-ink:     #fef3c7;
     --border:          rgba(255,255,255,0.12);
-    --user-bubble:     #1c2a3c;
+    --user-bubble:     #2d2650;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page:            #0d0d0d;
-  --surface:         #1a1a19;
-  --surface-2:       #232322;
-  --ink-primary:     #ffffff;
-  --ink-secondary:   #c3c2b7;
-  --ink-muted:       #898781;
+  --page:            #131120;
+  --surface:         #1c1a2b;
+  --surface-2:       #262336;
+  --ink-primary:     #f5f3ff;
+  --ink-secondary:   #c4bfe0;
+  --ink-muted:       #8b84ab;
   --gridline:        #2c2c2a;
   --baseline:        #383835;
-  --series-1:        #3987e5;
+  --series-1:        #a78bfa;
   --series-2:        #d95926;
   --series-3:        #199e70;
   --series-4:        #c98500;
@@ -88,20 +89,20 @@
   --series-11:       #c563c5;
   --series-12:       #93a63f;
   --series-rollup:   #6e6c66;
-  --series-1-wash:   rgba(57,135,229,0.16);
-  --good:            #0ca30c;
-  --critical:        #e66767;
-  --warning-bg:      #c98500;
-  --warning-ink:     #0b0b0b;
+  --series-1-wash:   rgba(167,139,250,0.18);
+  --good:            #34d399;
+  --critical:        #fb7185;
+  --warning-bg:      #b45309;
+  --warning-ink:     #fef3c7;
   --border:          rgba(255,255,255,0.12);
-  --user-bubble:     #1c2a3c;
+  --user-bubble:     #2d2650;
 }
 
 /* Chỉ reset trung tính ở đây. Layout của body (flex 2 cột ở app, cuộn dọc ở preview)
    là việc của từng trang — để ở file dùng chung sẽ ép preview vào layout của app. */
 * { box-sizing: border-box; }
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: 'DM Sans', system-ui, -apple-system, "Segoe UI", sans-serif;
   margin: 0;
   background: var(--page); color: var(--ink-primary);
 }
