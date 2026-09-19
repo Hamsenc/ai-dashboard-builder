@@ -9,26 +9,39 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <style>
-  body { padding: 0; margin: 0; }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; height: 100vh; overflow: hidden; }
   .page-content { max-width: 960px; margin: 0 auto; padding: 28px 32px; }
 
-  .app-tabs {
-    display: flex; gap: 4px; padding: 10px 16px 0; background: var(--surface-2);
-    border-bottom: 1px solid var(--border);
+  /* ---------- Sidebar + top bar dùng chung 3 trang (index/embeds/admin) ---------- */
+  .sidebar {
+    width: 208px; flex-shrink: 0; background: var(--surface-2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 12px; gap: 2px; overflow-y: auto;
   }
-  .app-tab {
-    padding: 9px 18px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 600;
-    color: var(--ink-secondary); text-decoration: none; border: 1px solid transparent;
+  .sidebar-title { font-size: 13.5px; font-weight: 700; padding: 0 10px 18px; color: var(--ink-primary); }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; color: var(--ink-secondary); text-decoration: none;
   }
-  .app-tab:hover { color: var(--ink-primary); }
-  .app-tab.active {
-    background: var(--surface); color: var(--ink-primary); border-color: var(--border);
-    border-bottom-color: var(--surface); position: relative; top: 1px;
+  .sidebar-link:hover { background: var(--surface); color: var(--ink-primary); }
+  .sidebar-link.active { background: var(--surface); color: var(--series-1); }
+
+  .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; }
+  .topbar {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+    padding: 10px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
   }
-  .app-tab.active::after {
-    content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px;
-    background: linear-gradient(90deg, #7c3aed, #0891b2);
+  #theme-toggle-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-primary);
+    border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px;
   }
+  .account-cluster { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-secondary); }
+  .account-avatar {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; flex-shrink: 0;
+  }
+  .account-cluster a { color: var(--series-1); font-weight: 600; text-decoration: none; }
+  .main-scroll { flex: 1; overflow-y: auto; min-height: 0; }
 
   h1 { font-size: 21px; font-weight: 650; margin: 0 0 6px; }
   p.lead { font-size: 13.5px; color: var(--ink-secondary); margin: 4px 0 24px; line-height: 1.5; }
@@ -74,6 +87,13 @@
   .primary-btn:hover { opacity: 0.9; }
   .secondary-btn { border: 1px solid var(--critical); background: transparent; color: var(--critical); }
   .secondary-btn:hover { background: color-mix(in srgb, var(--critical) 10%, transparent); }
+  .neutral-btn {
+    border: 1px solid var(--border); background: transparent; color: var(--ink-primary);
+    border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .neutral-btn:hover { background: var(--surface-2); }
+  .user-link { background: none; border: none; padding: 0; color: var(--series-1); font-weight: 600; cursor: pointer; font-size: inherit; }
+  .user-link:hover { text-decoration: underline; }
   button:disabled { opacity: 0.6; cursor: default; }
   #role-result { font-size: 12.5px; margin-bottom: 14px; }
   #role-result.error { color: var(--critical); }
@@ -87,12 +107,20 @@
 </head>
 <body>
 
-<div class="app-tabs">
-  <a href="/" class="app-tab">🗂️ Tư vấn chọn bảng</a>
-  <a href="/embeds.html" class="app-tab" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
-  <a href="/admin.html" class="app-tab active">🛠️ Quản trị</a>
+<nav class="sidebar">
+  <div class="sidebar-title">🗂️ Data Explorer</div>
+  <a href="/" class="sidebar-link">🗂️ Tư vấn chọn bảng</a>
+  <a href="/embeds.html" class="sidebar-link" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
+  <a href="/admin.html" class="sidebar-link active">🛠️ Quản trị</a>
+</nav>
+
+<div class="main-col">
+<div class="topbar">
+  <button id="theme-toggle-btn" title="Đổi giao diện sáng/tối">◐</button>
+  <div class="account-cluster" id="account-cluster"></div>
 </div>
 
+<div class="main-scroll">
 <div class="page-content">
 
 <h1>Quản trị</h1>
@@ -125,10 +153,15 @@
 
   <div class="scroll-table">
     <table class="data-table" id="roles-table">
-      <thead><tr><th>Email</th><th>Role</th><th>Nguồn</th><th>Cập nhật</th></tr></thead>
-      <tbody id="roles-body"><tr><td colspan="4" class="empty-state">Đang tải...</td></tr></tbody>
+      <thead><tr><th>Email</th><th>Role</th><th>Nguồn</th><th>Cập nhật</th><th>Link đang hoạt động</th><th>Đã thu hồi</th><th></th></tr></thead>
+      <tbody id="roles-body"><tr><td colspan="7" class="empty-state">Đang tải...</td></tr></tbody>
     </table>
   </div>
+</div>
+
+<div class="card" id="user-filter-bar" hidden style="display:flex; align-items:center; justify-content:space-between; padding:14px 20px;">
+  <span>Đang xem theo user: <strong id="user-filter-email"></strong></span>
+  <button class="neutral-btn" id="user-filter-clear">Xem tất cả</button>
 </div>
 
 <div class="card">
@@ -165,8 +198,38 @@
 </div>
 
 </div>
+</div>
+</div>
 
 <script>
+(function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+  document.getElementById('theme-toggle-btn').onclick = () => {
+    const isDark = document.documentElement.dataset.theme === 'dark'
+      || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('theme', next);
+  };
+})();
+
+function renderAccount(me) {
+  const el = document.getElementById('account-cluster');
+  el.innerHTML = '';
+  if (!me) {
+    const login = document.createElement('a'); login.href = '/auth/lark/login'; login.textContent = 'Đăng nhập Lark';
+    el.appendChild(login);
+    return;
+  }
+  const avatar = document.createElement('div');
+  avatar.className = 'account-avatar';
+  avatar.textContent = (me.user.trim()[0] || '?').toUpperCase();
+  const name = document.createElement('span'); name.textContent = me.user;
+  const logout = document.createElement('a'); logout.href = '/auth/lark/logout'; logout.textContent = 'Đăng xuất';
+  el.append(avatar, name, logout);
+}
+
 let devUser = localStorage.getItem('dev_user') || 'dev@local';
 
 function fmtTime(iso) {
@@ -200,52 +263,84 @@ async function loadLogins() {
   }
 }
 
-async function loadEmbedEvents() {
+// Cache dữ liệu embed-events/active-embeds đã tải để lọc theo user ngay trên client
+// (bấm 1 email trong bảng Phân quyền) — không cần gọi lại API mỗi lần đổi bộ lọc.
+let _allEvents = [];
+let _allActiveEmbeds = [];
+let _userFilter = null;
+
+function setUserFilter(email) {
+  _userFilter = email;
+  const bar = document.getElementById('user-filter-bar');
+  bar.hidden = !email;
+  document.getElementById('user-filter-email').textContent = email || '';
+  renderEmbedEvents();
+  renderActiveEmbeds();
+  if (email) document.getElementById('user-filter-bar').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+document.getElementById('user-filter-clear').onclick = () => setUserFilter(null);
+
+function renderEmbedEvents() {
   const body = document.getElementById('embed-events-body');
+  const list = _userFilter ? _allEvents.filter(ev => ev.created_by === _userFilter) : _allEvents;
+  body.innerHTML = '';
+  if (!list.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có sự kiện nào.</td></tr>'; return; }
+  for (const ev of list) {
+    const tr = document.createElement('tr');
+    const pill = document.createElement('span');
+    pill.className = `status-pill ${ev.event}`;
+    pill.textContent = ev.event;
+    const evTd = document.createElement('td'); evTd.appendChild(pill);
+    tr.append(td(fmtTime(ev.event_at)), evTd, td(ev.title), td(ev.created_by), td(ev.embed_id));
+    body.appendChild(tr);
+  }
+}
+
+async function loadEmbedEvents() {
   try {
     const {events} = await api('/api/admin/embed-events');
-    body.innerHTML = '';
-    if (!events.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có sự kiện nào.</td></tr>'; return; }
-    for (const ev of events) {
-      const tr = document.createElement('tr');
-      const pill = document.createElement('span');
-      pill.className = `status-pill ${ev.event}`;
-      pill.textContent = ev.event;
-      const evTd = document.createElement('td'); evTd.appendChild(pill);
-      tr.append(td(fmtTime(ev.event_at)), evTd, td(ev.title), td(ev.created_by), td(ev.embed_id));
-      body.appendChild(tr);
-    }
+    _allEvents = events;
+    renderEmbedEvents();
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="5" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
+    document.getElementById('embed-events-body').innerHTML = `<tr><td colspan="5" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
+  }
+}
+
+function renderActiveEmbeds() {
+  const body = document.getElementById('active-embeds-body');
+  const list = _userFilter ? _allActiveEmbeds.filter(em => em.created_by === _userFilter) : _allActiveEmbeds;
+  body.innerHTML = '';
+  if (!list.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có dashboard nào đang hoạt động.</td></tr>'; return; }
+  for (const em of list) {
+    const tr = document.createElement('tr');
+    const linkTd = document.createElement('td');
+    const a = document.createElement('a'); a.href = `/d/${em.embed_id}`; a.target = '_blank'; a.textContent = 'Xem →';
+    linkTd.appendChild(a);
+    const actionTd = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'revoke-btn'; btn.textContent = 'Thu hồi';
+    btn.onclick = async () => {
+      if (!confirm(`Thu hồi link "${em.title}" của ${em.created_by}?`)) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/admin/embeds/${em.embed_id}/revoke`, {method: 'POST'});
+        _allActiveEmbeds = _allActiveEmbeds.filter(x => x.embed_id !== em.embed_id);
+        renderActiveEmbeds();
+      } catch (e) { alert('Lỗi thu hồi: ' + e.message); btn.disabled = false; }
+    };
+    actionTd.appendChild(btn);
+    tr.append(td(em.title), td(em.created_by), td(fmtTime(em.event_at)), linkTd, actionTd);
+    body.appendChild(tr);
   }
 }
 
 async function loadActiveEmbeds() {
-  const body = document.getElementById('active-embeds-body');
   try {
     const {embeds} = await api('/api/admin/embeds');
-    body.innerHTML = '';
-    if (!embeds.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có dashboard nào đang hoạt động.</td></tr>'; return; }
-    for (const em of embeds) {
-      const tr = document.createElement('tr');
-      const linkTd = document.createElement('td');
-      const a = document.createElement('a'); a.href = `/d/${em.embed_id}`; a.target = '_blank'; a.textContent = 'Xem →';
-      linkTd.appendChild(a);
-      const actionTd = document.createElement('td');
-      const btn = document.createElement('button');
-      btn.className = 'revoke-btn'; btn.textContent = 'Thu hồi';
-      btn.onclick = async () => {
-        if (!confirm(`Thu hồi link "${em.title}" của ${em.created_by}?`)) return;
-        btn.disabled = true;
-        try { await api(`/api/admin/embeds/${em.embed_id}/revoke`, {method: 'POST'}); tr.remove(); }
-        catch (e) { alert('Lỗi thu hồi: ' + e.message); btn.disabled = false; }
-      };
-      actionTd.appendChild(btn);
-      tr.append(td(em.title), td(em.created_by), td(fmtTime(em.event_at)), linkTd, actionTd);
-      body.appendChild(tr);
-    }
+    _allActiveEmbeds = embeds;
+    renderActiveEmbeds();
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="5" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
+    document.getElementById('active-embeds-body').innerHTML = `<tr><td colspan="5" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
   }
 }
 
@@ -258,10 +353,20 @@ async function loadRoles() {
       ...super_admins.map(email => ({user_email: email, role: 'admin + embed', source: 'Quản lý cao nhất', event_at: null})),
       ...roles.map(r => ({...r, source: `cấp bởi ${r.granted_by}`})),
     ];
-    if (!rows.length) { body.innerHTML = '<tr><td colspan="4" class="empty-state">Chưa cấp quyền cho ai.</td></tr>'; return; }
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="empty-state">Chưa cấp quyền cho ai.</td></tr>'; return; }
     for (const r of rows) {
       const tr = document.createElement('tr');
-      tr.append(td(r.user_email), td(r.role), td(r.source), td(fmtTime(r.event_at)));
+      const activeCount = _allActiveEmbeds.filter(em => em.created_by === r.user_email).length;
+      const revokedCount = _allEvents.filter(ev => ev.created_by === r.user_email && ev.event === 'revoked').length;
+      const emailBtn = document.createElement('button');
+      emailBtn.className = 'user-link'; emailBtn.textContent = r.user_email;
+      emailBtn.onclick = () => setUserFilter(r.user_email);
+      const emailTd = document.createElement('td'); emailTd.appendChild(emailBtn);
+      const viewTd = document.createElement('td');
+      const viewBtn = document.createElement('button'); viewBtn.className = 'user-link'; viewBtn.textContent = 'Xem link →';
+      viewBtn.onclick = () => setUserFilter(r.user_email);
+      viewTd.appendChild(viewBtn);
+      tr.append(emailTd, td(r.role), td(r.source), td(fmtTime(r.event_at)), td(activeCount), td(revokedCount), viewTd);
       body.appendChild(tr);
     }
 
@@ -317,19 +422,24 @@ document.getElementById('revoke-btn').onclick = () => submitRole('revoke');
     if (res.ok) {
       const me = await res.json();
       devUser = me.user;
+      renderAccount(me);
       document.getElementById('embeds-tab').hidden = !me.can_upload_embed;
       if (!me.is_admin) {
         document.querySelector('.page-content').innerHTML = '<p class="empty-state">Bạn không có quyền admin. '
           + '<a href="/">← Quay lại Tư vấn chọn bảng</a></p>';
         return;
       }
+      // Tải embed-events/active-embeds TRƯỚC roles — loadRoles() cần 2 cache này
+      // (_allEvents/_allActiveEmbeds) đã có sẵn để tính số link đang hoạt động/đã
+      // thu hồi theo từng user.
+      await loadActiveEmbeds();
+      await loadEmbedEvents();
       loadRoles();
-      loadActiveEmbeds();
-      loadEmbedEvents();
       loadLogins();
       return;
     }
   } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }
+  renderAccount(null);
   document.querySelector('.page-content').innerHTML = '<p class="empty-state">Bạn cần <a href="/auth/lark/login">đăng nhập Lark</a> trước.</p>';
 })();
 </script>

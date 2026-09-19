@@ -9,27 +9,38 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <style>
-  html, body { height: 100%; }
-  body { display: flex; flex-direction: column; height: 100vh; }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; height: 100vh; overflow: hidden; }
 
-  /* ---------- Tab bar dùng chung giữa Data Explorer và Nhúng dashboard ---------- */
-  .app-tabs {
-    display: flex; gap: 4px; padding: 10px 16px 0; background: var(--surface-2);
-    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  /* ---------- Sidebar + top bar dùng chung 3 trang (index/embeds/admin) ---------- */
+  .sidebar {
+    width: 208px; flex-shrink: 0; background: var(--surface-2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 12px; gap: 2px; overflow-y: auto;
   }
-  .app-tab {
-    padding: 9px 18px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 600;
-    color: var(--ink-secondary); text-decoration: none; border: 1px solid transparent;
+  .sidebar-title { font-size: 13.5px; font-weight: 700; padding: 0 10px 18px; color: var(--ink-primary); }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; color: var(--ink-secondary); text-decoration: none;
   }
-  .app-tab:hover { color: var(--ink-primary); }
-  .app-tab.active {
-    background: var(--surface); color: var(--ink-primary); border-color: var(--border);
-    border-bottom-color: var(--surface); position: relative; top: 1px;
+  .sidebar-link:hover { background: var(--surface); color: var(--ink-primary); }
+  .sidebar-link.active { background: var(--surface); color: var(--series-1); }
+
+  .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; }
+  .topbar {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+    padding: 10px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
   }
-  .app-tab.active::after {
-    content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px;
-    background: linear-gradient(90deg, #7c3aed, #0891b2);
+  #theme-toggle-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-primary);
+    border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px;
   }
+  .account-cluster { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-secondary); }
+  .account-avatar {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; flex-shrink: 0;
+  }
+  .account-cluster a { color: var(--series-1); font-weight: 600; text-decoration: none; }
+
   .app-content { display: flex; flex: 1; min-height: 0; }
 
   /* ---------- Chat pane (Advisor) ---------- */
@@ -83,7 +94,6 @@
   #explorer-pane { flex: 1; padding: 28px 32px; overflow-y: auto; }
   #explorer-header { display:flex; align-items:center; justify-content:space-between; gap: 16px; margin-bottom: 18px; }
   #explorer-header h2 { font-size: 20px; font-weight: 650; margin: 0; }
-  #whoami { font-size: 11px; color: var(--ink-muted); }
 
   #search-row { margin-bottom: 16px; }
   #search-input {
@@ -203,22 +213,25 @@
 </head>
 <body>
 
-<div class="app-tabs">
-  <a href="/" class="app-tab active">🗂️ Tư vấn chọn bảng</a>
-  <a href="/embeds.html" class="app-tab" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
-  <a href="/admin.html" class="app-tab" id="admin-tab" hidden>🛠️ Quản trị</a>
+<nav class="sidebar">
+  <div class="sidebar-title">🗂️ Data Explorer</div>
+  <a href="/" class="sidebar-link active">🗂️ Tư vấn chọn bảng</a>
+  <a href="/embeds.html" class="sidebar-link" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
+  <a href="/admin.html" class="sidebar-link" id="admin-tab" hidden>🛠️ Quản trị</a>
+</nav>
+
+<div class="main-col">
+<div class="topbar">
+  <button id="theme-toggle-btn" title="Đổi giao diện sáng/tối">◐</button>
+  <div class="account-cluster" id="account-cluster"></div>
 </div>
 
 <div class="app-content">
 
 <div id="chat-pane">
   <div id="chat-header">
-    <div style="display:flex; align-items:center; justify-content:space-between;">
-      <h1>Tư vấn chọn bảng</h1>
-      <button id="theme-toggle-btn" title="Đổi giao diện sáng/tối" style="border:1px solid var(--border); background:var(--surface); color:var(--ink-primary); border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px;">◐</button>
-    </div>
+    <h1>Tư vấn chọn bảng</h1>
     <p>Mô tả báo cáo bạn muốn làm — mình gợi ý bảng dữ liệu phù hợp.</p>
-    <p id="whoami"></p>
   </div>
   <div id="messages"></div>
   <div id="input-row">
@@ -247,6 +260,7 @@
 </div>
 
 </div>
+</div>
 
 <script>
 (function initTheme() {
@@ -267,19 +281,30 @@
 let devUser = localStorage.getItem('dev_user') || 'dev@local';
 let isAuthenticated = false;
 
+function renderAccount(me) {
+  const el = document.getElementById('account-cluster');
+  el.innerHTML = '';
+  if (!me) {
+    const login = document.createElement('a'); login.href = '/auth/lark/login'; login.textContent = 'Đăng nhập Lark';
+    el.appendChild(login);
+    return;
+  }
+  const avatar = document.createElement('div');
+  avatar.className = 'account-avatar';
+  avatar.textContent = (me.user.trim()[0] || '?').toUpperCase();
+  const name = document.createElement('span'); name.textContent = me.user;
+  const logout = document.createElement('a'); logout.href = '/auth/lark/logout'; logout.textContent = 'Đăng xuất';
+  el.append(avatar, name, logout);
+}
+
 async function initIdentity() {
-  const whoamiEl = document.getElementById('whoami');
   try {
     const res = await fetch('/api/me', {headers: {'X-Dev-User': devUser}});
     if (res.ok) {
       const me = await res.json();
       isAuthenticated = true;
       devUser = me.user;
-      whoamiEl.innerHTML = '';
-      const span = document.createElement('span');
-      span.textContent = me.authenticated_via_lark ? `Đăng nhập: ${me.user} · ` : `Dev user: ${me.user} · `;
-      const logout = document.createElement('a'); logout.href = '/auth/lark/logout'; logout.textContent = 'Đăng xuất';
-      whoamiEl.appendChild(span); whoamiEl.appendChild(logout);
+      renderAccount(me);
       const input = document.getElementById('message-input');
       input.disabled = false;
       input.placeholder = 'Mô tả báo cáo bạn muốn làm...';
@@ -291,9 +316,7 @@ async function initIdentity() {
   } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }
 
   isAuthenticated = false;
-  whoamiEl.innerHTML = '';
-  const login = document.createElement('a'); login.href = '/auth/lark/login'; login.textContent = 'Đăng nhập Lark để bắt đầu';
-  whoamiEl.appendChild(login);
+  renderAccount(null);
 }
 initIdentity();
 
