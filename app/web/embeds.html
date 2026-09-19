@@ -939,7 +939,23 @@ async function saveEdit(embedId, title, ownerName, promptNote, specObj, dataFile
       document.getElementById('admin-tab').hidden = !me.is_admin;
       if (!me.can_upload_embed) {
         document.querySelector('.page-content').innerHTML = '<p class="empty-state">Bạn chưa được cấp quyền upload dashboard. '
-          + '<a href="/">← Quay lại Tư vấn chọn bảng</a></p>';
+          + '<a href="/">← Quay lại Tư vấn chọn bảng</a></p>'
+          + '<button class="primary-btn" id="request-access-btn" style="margin-top:10px;">Yêu cầu cấp quyền</button>'
+          + '<p class="empty-state" id="request-access-result" style="margin-top:8px;"></p>';
+        document.getElementById('request-access-btn').onclick = async (e) => {
+          const btn = e.target, resultEl = document.getElementById('request-access-result');
+          btn.disabled = true;
+          try {
+            const res = await fetch('/api/embeds/request-access', {method: 'POST', headers: {'X-Dev-User': devUser}});
+            const {status} = await res.json();
+            resultEl.textContent = status === 'already_requested'
+              ? 'Bạn đã gửi yêu cầu trước đó, đang chờ admin duyệt.'
+              : 'Đã gửi yêu cầu — admin sẽ duyệt và cấp quyền cho bạn.';
+          } catch (err) {
+            resultEl.textContent = 'Lỗi gửi yêu cầu: ' + err.message;
+            btn.disabled = false;
+          }
+        };
         return;
       }
       loadEmbeds();

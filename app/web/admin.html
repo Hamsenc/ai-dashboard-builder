@@ -112,6 +112,17 @@
     <button class="secondary-btn" id="revoke-btn">Thu hồi</button>
   </div>
   <div id="role-result"></div>
+
+  <div id="pending-requests-wrap" hidden>
+    <p class="sub" style="margin-bottom:8px;"><strong>Yêu cầu đang chờ duyệt</strong></p>
+    <div class="scroll-table" style="margin-bottom:18px;">
+      <table class="data-table">
+        <thead><tr><th>Email</th><th>Role</th><th>Lúc yêu cầu</th><th></th></tr></thead>
+        <tbody id="pending-requests-body"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="scroll-table">
     <table class="data-table" id="roles-table">
       <thead><tr><th>Email</th><th>Role</th><th>Nguồn</th><th>Cập nhật</th></tr></thead>
@@ -241,7 +252,7 @@ async function loadActiveEmbeds() {
 async function loadRoles() {
   const body = document.getElementById('roles-body');
   try {
-    const {super_admins, roles} = await api('/api/admin/roles');
+    const {super_admins, roles, pending_requests} = await api('/api/admin/roles');
     body.innerHTML = '';
     const rows = [
       ...super_admins.map(email => ({user_email: email, role: 'admin + embed', source: 'Quản lý cao nhất', event_at: null})),
@@ -253,15 +264,34 @@ async function loadRoles() {
       tr.append(td(r.user_email), td(r.role), td(r.source), td(fmtTime(r.event_at)));
       body.appendChild(tr);
     }
+
+    const pendingWrap = document.getElementById('pending-requests-wrap');
+    const pendingBody = document.getElementById('pending-requests-body');
+    pendingBody.innerHTML = '';
+    pendingWrap.hidden = !pending_requests.length;
+    for (const r of pending_requests) {
+      const tr = document.createElement('tr');
+      const actionTd = document.createElement('td');
+      const approveBtn = document.createElement('button');
+      approveBtn.className = 'primary-btn'; approveBtn.textContent = 'Duyệt';
+      approveBtn.style.marginRight = '6px';
+      approveBtn.onclick = () => submitRole('grant', r.user_email, r.role);
+      const rejectBtn = document.createElement('button');
+      rejectBtn.className = 'secondary-btn'; rejectBtn.textContent = 'Từ chối';
+      rejectBtn.onclick = () => submitRole('revoke', r.user_email, r.role);
+      actionTd.append(approveBtn, rejectBtn);
+      tr.append(td(r.user_email), td(r.role), td(fmtTime(r.event_at)), actionTd);
+      pendingBody.appendChild(tr);
+    }
   } catch (e) {
     body.innerHTML = `<tr><td colspan="4" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
   }
 }
 
-async function submitRole(action) {
+async function submitRole(action, email, role) {
   const resultEl = document.getElementById('role-result');
-  const email = document.getElementById('role-email').value.trim();
-  const role = document.getElementById('role-select').value;
+  email = email ?? document.getElementById('role-email').value.trim();
+  role = role ?? document.getElementById('role-select').value;
   if (!email) { resultEl.className = 'error'; resultEl.textContent = 'Nhập email trước.'; return; }
   resultEl.className = ''; resultEl.textContent = 'Đang lưu...';
   try {

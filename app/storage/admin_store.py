@@ -73,7 +73,29 @@ def get_active_roles(client: bigquery.Client, user_email: str) -> set[str]:
     return {r["role"] for r in rows}
 
 
+def get_latest_role_event(client: bigquery.Client, user_email: str, role: str) -> dict[str, Any] | None:
+    """Sự kiện mới nhất của 1 user cho 1 role cụ thể — 'granted' | 'revoked' |
+    'requested', hoặc None nếu chưa từng có sự kiện nào. Dùng để tự phục vụ nút
+    "Yêu cầu cấp quyền" (không request lại nếu đã granted/đang requested)."""
+    sql = (
+        f"SELECT * FROM `{_table('v_current_user_roles')}` "
+        "WHERE user_email = @email AND role = @role"
+    )
+    job_config = bigquery.QueryJobConfig(query_parameters=[
+        bigquery.ScalarQueryParameter("email", "STRING", user_email.strip().lower()),
+        bigquery.ScalarQueryParameter("role", "STRING", role),
+    ])
+    rows = list(client.query(sql, job_config=job_config).result())
+    return dict(rows[0].items()) if rows else None
+
+
 def list_current_roles(client: bigquery.Client) -> list[dict[str, Any]]:
     sql = f"SELECT * FROM `{_table('v_current_user_roles')}` WHERE event = 'granted' ORDER BY user_email, role"
+    rows = list(client.query(sql).result())
+    return [dict(r.items()) for r in rows]
+
+
+def list_pending_role_requests(client: bigquery.Client) -> list[dict[str, Any]]:
+    sql = f"SELECT * FROM `{_table('v_current_user_roles')}` WHERE event = 'requested' ORDER BY event_at"
     rows = list(client.query(sql).result())
     return [dict(r.items()) for r in rows]

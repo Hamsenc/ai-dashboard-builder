@@ -48,7 +48,12 @@ def revoke_any_embed(embed_id: str, user: str = Depends(get_current_user)):
 
 @router.get("/roles")
 def list_roles():
-    return {"super_admins": Config.SUPER_ADMIN_EMAILS, "roles": admin_store.list_current_roles(get_bq_client())}
+    client = get_bq_client()
+    return {
+        "super_admins": Config.SUPER_ADMIN_EMAILS,
+        "roles": admin_store.list_current_roles(client),
+        "pending_requests": admin_store.list_pending_role_requests(client),
+    }
 
 
 class RoleRequest(BaseModel):

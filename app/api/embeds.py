@@ -20,7 +20,7 @@ from embeds.gcs_store import upload_bytes, upload_html
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
-from storage import embeds_store
+from storage import admin_store, embeds_store
 
 router = APIRouter(prefix="/api/embeds")
 
@@ -88,6 +88,21 @@ def list_embeds(all: bool = False, user: str = Depends(get_current_user)):
     else:
         embeds = embeds_store.list_current_embeds(client, created_by=user)
     return {"embeds": embeds}
+
+
+@router.post("/request-access")
+def request_access(user: str = Depends(get_current_user)):
+    """Tự phục vụ: user chưa có quyền embed bấm nút "Yêu cầu cấp quyền" ở
+    embeds.html — ghi 1 event 'requested' vào user_roles, admin thấy trong tab
+    Phân quyền của /admin.html để duyệt (grant) hoặc từ chối (revoke)."""
+    if can_use_embeds(user):
+        return {"status": "already_granted"}
+    client = get_bq_client()
+    existing = admin_store.get_latest_role_event(client, user, "embed")
+    if existing and existing["event"] == "requested":
+        return {"status": "already_requested"}
+    admin_store.insert_role_event(client, user, "embed", "requested", granted_by=user)
+    return {"status": "requested"}
 
 
 @router.post("")
