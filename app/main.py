@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import pathlib
 
-from api import advise, catalog, embed_view, embeds
+from api import admin, advise, catalog, embed_view, embeds
 from auth import lark_oauth
 from auth.deps import get_current_user
+from auth.roles import can_use_embeds, is_admin
 from catalog.client import load_catalog
-from config import Config
 from fastapi import Depends, FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
@@ -19,14 +19,19 @@ app.include_router(catalog.router)
 app.include_router(advise.router)
 app.include_router(lark_oauth.router)
 app.include_router(embeds.router)
+app.include_router(admin.router)
 app.include_router(embed_view.router)  # public, phải đăng ký trước StaticFiles mount bên dưới
 
 
 @app.get("/api/me")
 async def get_me(request: Request, user: str = Depends(get_current_user)):
     is_lark_session = request.cookies.get("session") is not None
-    can_upload_embed = user.strip().lower() in Config.UPLOAD_WHITELIST_EMAILS
-    return {"user": user, "authenticated_via_lark": is_lark_session, "can_upload_embed": can_upload_embed}
+    return {
+        "user": user,
+        "authenticated_via_lark": is_lark_session,
+        "can_upload_embed": can_use_embeds(user),
+        "is_admin": is_admin(user),
+    }
 
 
 @app.on_event("startup")

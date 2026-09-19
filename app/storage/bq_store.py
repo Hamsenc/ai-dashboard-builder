@@ -2,10 +2,10 @@
 (tiền tố `raw_dashboard_builder_`).
 
 Sau khi bỏ luồng dashboard builder, bảng `blueprints`/`builds`/`kpi_confirmations`
-không còn hàm ghi tương ứng (KHÔNG xoá bảng trên BigQuery — dữ liệu lịch sử vẫn còn
-đó, DDL vẫn giữ ở app/storage/ddl/ để tham khảo/audit). Chỉ còn `chat_messages`
-(lịch sử hội thoại Advisor) và `data_access_log` (audit ai đã xem/preview bảng nào)
-đang được ghi.
+(+ view `v_current_blueprints`) đã xoá khỏi BigQuery và khỏi app/storage/ddl/ — không
+còn hàm ghi tương ứng và không ai đọc lại dữ liệu cũ. Chỉ còn `chat_messages` (lịch sử
+hội thoại Advisor) và `data_access_log` (audit ai đã xem/preview bảng nào) đang được
+ghi.
 
 Quyết định thiết kế: KHÔNG bao giờ UPDATE (BigQuery không hợp với ghi/sửa tần suất
 cao kiểu app state — streaming buffer, quota DML). Mọi bảng ở đây append-only."""

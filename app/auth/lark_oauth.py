@@ -24,9 +24,12 @@ import os
 import secrets
 
 import httpx
+from api.catalog import get_bq_client
 from auth.session import create_session_token
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from starlette.concurrency import run_in_threadpool
+from storage import admin_store
 
 router = APIRouter(prefix="/auth/lark")
 
@@ -100,6 +103,14 @@ async def callback(request: Request, code: str | None = None, state: str | None 
         "name": info.get("name", ""),
     }
     session_token = create_session_token(session_payload)
+
+    try:
+        await run_in_threadpool(
+            admin_store.insert_login,
+            get_bq_client(), session_payload["email"], session_payload["name"], session_payload["lark_user_id"],
+        )
+    except Exception as e:  # noqa: BLE001 — không chặn đăng nhập nếu ghi log lỗi
+        print(f"CẢNH BÁO: ghi login log thất bại: {e}")
 
     response = RedirectResponse("/")
     # path="/api": mọi route có Depends(get_current_user) đều nằm dưới /api/*

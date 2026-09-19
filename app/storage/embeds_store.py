@@ -94,3 +94,13 @@ def list_current_embeds(client: bigquery.Client, created_by: str | None = None) 
     job_config = bigquery.QueryJobConfig(query_parameters=query_parameters)
     rows = list(client.query(sql, job_config=job_config).result())
     return [_row_to_dict(r) for r in rows]
+
+
+def list_embed_events(client: bigquery.Client, limit: int = 500) -> list[dict[str, Any]]:
+    """Toàn bộ lịch sử (created/updated/revoked), MỌI user — dùng cho trang admin
+    theo dõi ai đã nhúng link nào, khi nào (khác list_current_embeds() chỉ trả bản
+    ghi mới nhất/còn hiệu lực)."""
+    sql = f"SELECT * FROM `{_table('embeds')}` ORDER BY event_at DESC LIMIT @limit"
+    job_config = bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter("limit", "INT64", limit)])
+    rows = list(client.query(sql, job_config=job_config).result())
+    return [_row_to_dict(r) for r in rows]

@@ -1,7 +1,8 @@
 """API upload/list/revoke Dashboard Embeds — GATED bằng session Lark OAuth +
-whitelist (Config.UPLOAD_WHITELIST_EMAILS). Route xem dashboard công khai nằm
-riêng ở app/api/embed_view.py (KHÔNG có Depends(get_current_user) ở đó), vì
-viewer qua link Lark không có session cookie."""
+quyền embed (auth.roles.can_use_embeds: whitelist cũ + role 'embed'/'admin' cấp
+qua /admin.html). Route xem dashboard công khai nằm riêng ở app/api/embed_view.py
+(KHÔNG có Depends(get_current_user) ở đó), vì viewer qua link Lark không có
+session cookie."""
 
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import secrets
 from api.catalog import get_bq_client
 from api.embed_view import invalidate_cache
 from auth.deps import get_current_user
+from auth.roles import can_use_embeds
 from config import Config
 from datasource import bq_meta
 from embeds import query_spec
@@ -30,14 +32,10 @@ _DATA_FILE_CONTENT_TYPES = {
 }
 
 
-def _is_whitelisted(user: str) -> bool:
-    return user.strip().lower() in Config.UPLOAD_WHITELIST_EMAILS
-
-
 def _assert_can_edit(embed: dict, user: str) -> None:
     """Dùng chung cho sửa metadata/spec, re-upload file dữ liệu, và revoke — chủ sở
-    hữu (created_by) hoặc người trong whitelist (đóng vai admin) mới được phép."""
-    if embed["created_by"].strip().lower() != user.strip().lower() and not _is_whitelisted(user):
+    hữu (created_by) hoặc người có quyền embed/admin mới được phép."""
+    if embed["created_by"].strip().lower() != user.strip().lower() and not can_use_embeds(user):
         raise HTTPException(403, "Bạn không có quyền sửa embed này.")
 
 
@@ -85,7 +83,7 @@ def list_embeds(all: bool = False, user: str = Depends(get_current_user)):
     client = get_bq_client()
     # ?all=true chỉ tác dụng với whitelist (đóng vai "admin") — cần thấy embed của
     # người khác mới có đường revoke; whitelist nhỏ nên không cần UI phân trang.
-    if all and _is_whitelisted(user):
+    if all and can_use_embeds(user):
         embeds = embeds_store.list_current_embeds(client)
     else:
         embeds = embeds_store.list_current_embeds(client, created_by=user)
@@ -102,8 +100,8 @@ async def create_embed(
     data_file: UploadFile | None = File(default=None),
     user: str = Depends(get_current_user),
 ):
-    if not _is_whitelisted(user):
-        raise HTTPException(403, "Bạn chưa được cấp quyền upload dashboard — liên hệ admin để thêm vào whitelist.")
+    if not can_use_embeds(user):
+        raise HTTPException(403, "Bạn chưa được cấp quyền upload dashboard — liên hệ admin để cấp quyền embed.")
 
     if not file.filename or not file.filename.lower().endswith(".html"):
         raise HTTPException(400, "Chỉ chấp nhận file .html.")

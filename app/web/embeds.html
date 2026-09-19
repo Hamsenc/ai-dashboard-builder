@@ -152,6 +152,7 @@
 <div class="app-tabs">
   <a href="/" class="app-tab">🗂️ Tư vấn chọn bảng</a>
   <a href="/embeds.html" class="app-tab active">📊 Nhúng dashboard vào Lark</a>
+  <a href="/admin.html" class="app-tab" id="admin-tab" hidden>🛠️ Quản trị</a>
 </div>
 
 <div class="page-content">
@@ -935,6 +936,7 @@ async function saveEdit(embedId, title, ownerName, promptNote, specObj, dataFile
     if (res.ok) {
       const me = await res.json();
       devUser = me.user;
+      document.getElementById('admin-tab').hidden = !me.is_admin;
       if (!me.can_upload_embed) {
         document.querySelector('.page-content').innerHTML = '<p class="empty-state">Bạn chưa được cấp quyền upload dashboard. '
           + '<a href="/">← Quay lại Tư vấn chọn bảng</a></p>';

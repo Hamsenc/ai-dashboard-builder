@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quản trị — Data Explorer</title>
+<link rel="stylesheet" href="/theme.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  body { padding: 0; margin: 0; }
+  .page-content { max-width: 960px; margin: 0 auto; padding: 28px 32px; }
+
+  .app-tabs {
+    display: flex; gap: 4px; padding: 10px 16px 0; background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .app-tab {
+    padding: 9px 18px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 600;
+    color: var(--ink-secondary); text-decoration: none; border: 1px solid transparent;
+  }
+  .app-tab:hover { color: var(--ink-primary); }
+  .app-tab.active {
+    background: var(--surface); color: var(--ink-primary); border-color: var(--border);
+    border-bottom-color: var(--surface); position: relative; top: 1px;
+  }
+  .app-tab.active::after {
+    content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px;
+    background: linear-gradient(90deg, #7c3aed, #0891b2);
+  }
+
+  h1 { font-size: 21px; font-weight: 650; margin: 0 0 6px; }
+  p.lead { font-size: 13.5px; color: var(--ink-secondary); margin: 4px 0 24px; line-height: 1.5; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 24px; margin-bottom: 22px;
+  }
+  .card h2 { font-size: 15px; font-weight: 650; margin: 0 0 4px; }
+  .card .sub { font-size: 12px; color: var(--ink-muted); margin: 0 0 16px; }
+
+  .scroll-table { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; max-height: 360px; }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  table.data-table th, table.data-table td {
+    padding: 7px 12px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border);
+  }
+  table.data-table th {
+    background: var(--surface-2); position: sticky; top: 0; font-weight: 650; color: var(--ink-secondary);
+  }
+  table.data-table tbody tr:last-child td { border-bottom: none; }
+  .empty-state { color: var(--ink-muted); font-size: 13px; }
+  .status-pill {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+    border-radius: 999px; padding: 2px 8px; white-space: nowrap;
+  }
+  .status-pill.created, .status-pill.granted { background: var(--series-1-wash); color: var(--series-1); }
+  .status-pill.updated { background: var(--warning-bg); color: var(--warning-ink); }
+  .status-pill.revoked { background: color-mix(in srgb, var(--critical) 12%, transparent); color: var(--critical); }
+
+  .role-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .role-form input[type=text] {
+    flex: 1; min-width: 220px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink-primary); font-size: 13px;
+  }
+  .role-form select {
+    padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    color: var(--ink-primary); font-size: 13px; cursor: pointer;
+  }
+  .primary-btn, .secondary-btn {
+    border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .primary-btn { border: none; background: var(--series-1); color: #fff; }
+  .primary-btn:hover { opacity: 0.9; }
+  .secondary-btn { border: 1px solid var(--critical); background: transparent; color: var(--critical); }
+  .secondary-btn:hover { background: color-mix(in srgb, var(--critical) 10%, transparent); }
+  button:disabled { opacity: 0.6; cursor: default; }
+  #role-result { font-size: 12.5px; margin-bottom: 14px; }
+  #role-result.error { color: var(--critical); }
+  #role-result.success { color: var(--good); }
+
+  .revoke-btn {
+    border: 1px solid var(--critical); background: transparent; color: var(--critical);
+    border-radius: 8px; padding: 5px 10px; font-size: 11.5px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-tabs">
+  <a href="/" class="app-tab">🗂️ Tư vấn chọn bảng</a>
+  <a href="/embeds.html" class="app-tab" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
+  <a href="/admin.html" class="app-tab active">🛠️ Quản trị</a>
+</div>
+
+<div class="page-content">
+
+<h1>Quản trị</h1>
+<p class="lead">Theo dõi đăng nhập, lịch sử nhúng dashboard, quản lý link đang hoạt động và phân quyền.</p>
+
+<div class="card">
+  <h2>Phân quyền</h2>
+  <p class="sub">Role <strong>embed</strong>: được tạo/sửa/xoá dashboard nhúng. Role <strong>admin</strong>: xem toàn bộ log
+    + phân quyền cho người khác — chỉ quản lý cao nhất mới cấp/thu hồi được role này.</p>
+  <div class="role-form">
+    <input type="text" id="role-email" placeholder="email@hapas.vn" />
+    <select id="role-select">
+      <option value="embed">embed</option>
+      <option value="admin">admin</option>
+    </select>
+    <button class="primary-btn" id="grant-btn">Cấp quyền</button>
+    <button class="secondary-btn" id="revoke-btn">Thu hồi</button>
+  </div>
+  <div id="role-result"></div>
+  <div class="scroll-table">
+    <table class="data-table" id="roles-table">
+      <thead><tr><th>Email</th><th>Role</th><th>Nguồn</th><th>Cập nhật</th></tr></thead>
+      <tbody id="roles-body"><tr><td colspan="4" class="empty-state">Đang tải...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Link nhúng đang hoạt động</h2>
+  <p class="sub">Toàn bộ dashboard đang có link chia sẻ (chưa bị thu hồi), của mọi người.</p>
+  <div class="scroll-table">
+    <table class="data-table" id="active-embeds-table">
+      <thead><tr><th>Tên</th><th>Chủ sở hữu</th><th>Tạo/sửa lúc</th><th>Link</th><th></th></tr></thead>
+      <tbody id="active-embeds-body"><tr><td colspan="5" class="empty-state">Đang tải...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Lịch sử nhúng dashboard</h2>
+  <p class="sub">Toàn bộ sự kiện tạo / sửa / thu hồi, của mọi người, mới nhất trước.</p>
+  <div class="scroll-table">
+    <table class="data-table" id="embed-events-table">
+      <thead><tr><th>Thời gian</th><th>Sự kiện</th><th>Tên</th><th>Người thao tác</th><th>Embed ID</th></tr></thead>
+      <tbody id="embed-events-body"><tr><td colspan="5" class="empty-state">Đang tải...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Lịch sử đăng nhập</h2>
+  <p class="sub">300 lượt đăng nhập gần nhất qua Lark OAuth.</p>
+  <div class="scroll-table">
+    <table class="data-table" id="logins-table">
+      <thead><tr><th>Thời gian</th><th>Email</th><th>Tên</th></tr></thead>
+      <tbody id="logins-body"><tr><td colspan="3" class="empty-state">Đang tải...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+let devUser = localStorage.getItem('dev_user') || 'dev@local';
+
+function fmtTime(iso) {
+  return iso ? new Date(iso).toLocaleString('vi-VN') : '—';
+}
+
+async function api(path, opts) {
+  const res = await fetch(path, {...opts, headers: {'X-Dev-User': devUser, ...(opts && opts.headers)}});
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Lỗi ${res.status}`);
+  }
+  return res.json();
+}
+
+function td(text) { const el = document.createElement('td'); el.textContent = text ?? '—'; return el; }
+
+async function loadLogins() {
+  const body = document.getElementById('logins-body');
+  try {
+    const {logins} = await api('/api/admin/logins');
+    body.innerHTML = '';
+    if (!logins.length) { body.innerHTML = '<tr><td colspan="3" class="empty-state">Chưa có lượt đăng nhập nào.</td></tr>'; return; }
+    for (const l of logins) {
+      const tr = document.createElement('tr');
+      tr.append(td(fmtTime(l.created_at)), td(l.email), td(l.name));
+      body.appendChild(tr);
+    }
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="3" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
+  }
+}
+
+async function loadEmbedEvents() {
+  const body = document.getElementById('embed-events-body');
+  try {
+    const {events} = await api('/api/admin/embed-events');
+    body.innerHTML = '';
+    if (!events.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có sự kiện nào.</td></tr>'; return; }
+    for (const ev of events) {
+      const tr = document.createElement('tr');
+      const pill = document.createElement('span');
+      pill.className = `status-pill ${ev.event}`;
+      pill.textContent = ev.event;
+      const evTd = document.createElement('td'); evTd.appendChild(pill);
+      tr.append(td(fmtTime(ev.event_at)), evTd, td(ev.title), td(ev.created_by), td(ev.embed_id));
+      body.appendChild(tr);
+    }
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="5" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
+  }
+}
+
+async function loadActiveEmbeds() {
+  const body = document.getElementById('active-embeds-body');
+  try {
+    const {embeds} = await api('/api/admin/embeds');
+    body.innerHTML = '';
+    if (!embeds.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có dashboard nào đang hoạt động.</td></tr>'; return; }
+    for (const em of embeds) {
+      const tr = document.createElement('tr');
+      const linkTd = document.createElement('td');
+      const a = document.createElement('a'); a.href = `/d/${em.embed_id}`; a.target = '_blank'; a.textContent = 'Xem →';
+      linkTd.appendChild(a);
+      const actionTd = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.className = 'revoke-btn'; btn.textContent = 'Thu hồi';
+      btn.onclick = async () => {
+        if (!confirm(`Thu hồi link "${em.title}" của ${em.created_by}?`)) return;
+        btn.disabled = true;
+        try { await api(`/api/admin/embeds/${em.embed_id}/revoke`, {method: 'POST'}); tr.remove(); }
+        catch (e) { alert('Lỗi thu hồi: ' + e.message); btn.disabled = false; }
+      };
+      actionTd.appendChild(btn);
+      tr.append(td(em.title), td(em.created_by), td(fmtTime(em.event_at)), linkTd, actionTd);
+      body.appendChild(tr);
+    }
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="5" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
+  }
+}
+
+async function loadRoles() {
+  const body = document.getElementById('roles-body');
+  try {
+    const {super_admins, roles} = await api('/api/admin/roles');
+    body.innerHTML = '';
+    const rows = [
+      ...super_admins.map(email => ({user_email: email, role: 'admin + embed', source: 'Quản lý cao nhất', event_at: null})),
+      ...roles.map(r => ({...r, source: `cấp bởi ${r.granted_by}`})),
+    ];
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="4" class="empty-state">Chưa cấp quyền cho ai.</td></tr>'; return; }
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      tr.append(td(r.user_email), td(r.role), td(r.source), td(fmtTime(r.event_at)));
+      body.appendChild(tr);
+    }
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="4" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
+  }
+}
+
+async function submitRole(action) {
+  const resultEl = document.getElementById('role-result');
+  const email = document.getElementById('role-email').value.trim();
+  const role = document.getElementById('role-select').value;
+  if (!email) { resultEl.className = 'error'; resultEl.textContent = 'Nhập email trước.'; return; }
+  resultEl.className = ''; resultEl.textContent = 'Đang lưu...';
+  try {
+    await api('/api/admin/roles', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({user_email: email, role, action}),
+    });
+    resultEl.className = 'success';
+    resultEl.textContent = action === 'grant' ? `Đã cấp quyền ${role} cho ${email}.` : `Đã thu hồi quyền ${role} của ${email}.`;
+    loadRoles();
+  } catch (e) {
+    resultEl.className = 'error';
+    resultEl.textContent = 'Lỗi: ' + e.message;
+  }
+}
+
+document.getElementById('grant-btn').onclick = () => submitRole('grant');
+document.getElementById('revoke-btn').onclick = () => submitRole('revoke');
+
+(async function init() {
+  try {
+    const res = await fetch('/api/me', {headers: {'X-Dev-User': devUser}});
+    if (res.ok) {
+      const me = await res.json();
+      devUser = me.user;
+      document.getElementById('embeds-tab').hidden = !me.can_upload_embed;
+      if (!me.is_admin) {
+        document.querySelector('.page-content').innerHTML = '<p class="empty-state">Bạn không có quyền admin. '
+          + '<a href="/">← Quay lại Tư vấn chọn bảng</a></p>';
+        return;
+      }
+      loadRoles();
+      loadActiveEmbeds();
+      loadEmbedEvents();
+      loadLogins();
+      return;
+    }
+  } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }
+  document.querySelector('.page-content').innerHTML = '<p class="empty-state">Bạn cần <a href="/auth/lark/login">đăng nhập Lark</a> trước.</p>';
+})();
+</script>
+
+</body>
+</html>

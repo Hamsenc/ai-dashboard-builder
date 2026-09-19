@@ -206,6 +206,7 @@
 <div class="app-tabs">
   <a href="/" class="app-tab active">🗂️ Tư vấn chọn bảng</a>
   <a href="/embeds.html" class="app-tab" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
+  <a href="/admin.html" class="app-tab" id="admin-tab" hidden>🛠️ Quản trị</a>
 </div>
 
 <div class="app-content">
@@ -284,6 +285,7 @@ async function initIdentity() {
       input.placeholder = 'Mô tả báo cáo bạn muốn làm...';
       document.getElementById('send-btn').disabled = false;
       document.getElementById('embeds-tab').hidden = !me.can_upload_embed;
+      document.getElementById('admin-tab').hidden = !me.is_admin;
       return;
     }
   } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }

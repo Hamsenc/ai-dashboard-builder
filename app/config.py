@@ -43,6 +43,15 @@ class Config:
         for e in os.environ.get("UPLOAD_WHITELIST_EMAILS", "").split(",")
         if e.strip()
     ]
+    # Quản lý cao nhất — luôn có sẵn cả 2 role admin/embed (xem app/auth/roles.py),
+    # không lưu trong BigQuery vì cần tồn tại NGAY từ đầu để tự cấp quyền cho người
+    # khác qua /admin.html (nếu để trong DB sẽ bị "trứng-gà": không ai cấp được
+    # role admin đầu tiên). Mặc định gồm ngadt@hapas.vn — người yêu cầu tính năng này.
+    SUPER_ADMIN_EMAILS = [
+        e.strip().lower()
+        for e in os.environ.get("SUPER_ADMIN_EMAILS", "ngadt@hapas.vn").split(",")
+        if e.strip()
+    ]
     EMBED_MAX_HTML_BYTES = int(os.environ.get("EMBED_MAX_HTML_BYTES", str(2 * 1024 * 1024)))
     # File dữ liệu (Excel/CSV) user tự tải lên làm nguồn "dữ liệu sống" thay BigQuery —
     # thường lớn hơn hẳn file HTML nên cap riêng, mặc định 10MB.
