@@ -53,7 +53,7 @@ async def login(request: Request):
         "redirect_uri": redirect_uri,
         "state": state,
     }
-    query = "&".join(f"{k}={httpx.QueryParams({k: v})[k]}" for k, v in params.items())
+    query = str(httpx.QueryParams(params))
     return RedirectResponse(f"{_ACCOUNTS_HOST}/open-apis/authen/v1/index?{query}")
 
 

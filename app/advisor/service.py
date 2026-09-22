@@ -6,6 +6,7 @@ audit, đủ dùng cho quy mô nội bộ công ty)."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from advisor.prompts import build_system_prompt
@@ -14,10 +15,10 @@ from advisor.schema import ADVISOR_TURN_SCHEMA, AdvisorTurn
 import llm_client
 
 
+@dataclass
 class ChatTurn:
-    def __init__(self, role: Literal["user", "advisor"], content: str):
-        self.role = role
-        self.content = content
+    role: Literal["user", "advisor"]
+    content: str
 
 
 def _render_transcript(history: list[ChatTurn]) -> str:

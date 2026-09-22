@@ -308,8 +308,8 @@ def update_embed(embed_id: str, req: UpdateEmbedRequest, user: str = Depends(get
     'updated' mang đủ mọi field (kể cả gcs_path/data_file_* giữ nguyên từ bản ghi hiện
     tại) — đúng quy ước append-only, "current" luôn là bản ghi mới nhất theo embed_id."""
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
     _assert_can_edit(client, embed, user)
 
@@ -337,8 +337,8 @@ async def update_embed_data_file(embed_id: str, data_file: UploadFile, user: str
     không đụng title/data_query_spec. Endpoint tách khỏi update_embed() vì đó nhận JSON,
     không mang được file."""
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
     _assert_can_edit(client, embed, user)
 
@@ -376,8 +376,8 @@ async def update_embed_data_file(embed_id: str, data_file: UploadFile, user: str
 @router.post("/{embed_id}/revoke")
 def revoke_embed(embed_id: str, user: str = Depends(get_current_user)):
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
     _assert_can_revoke(embed, user)
 
@@ -404,8 +404,8 @@ def _assert_can_manage_shares(embed: dict, user: str) -> None:
 @router.get("/{embed_id}/shares")
 def get_shares(embed_id: str, user: str = Depends(get_current_user)):
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
     _assert_can_manage_shares(embed, user)
     return {"shares": embeds_store.list_shares_for_embed(client, embed_id)}
@@ -419,8 +419,8 @@ def share_embed(embed_id: str, req: ShareEmbedRequest, user: str = Depends(get_c
     if not shared_with:
         raise HTTPException(400, "Thiếu email hoặc '*' để chia sẻ.")
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
     _assert_can_manage_shares(embed, user)
     if shared_with != "*" and shared_with == embed["owner_email"].strip().lower():
@@ -433,8 +433,8 @@ def share_embed(embed_id: str, req: ShareEmbedRequest, user: str = Depends(get_c
 @router.post("/{embed_id}/unshare")
 def unshare_embed(embed_id: str, req: UnshareEmbedRequest, user: str = Depends(get_current_user)):
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
     _assert_can_manage_shares(embed, user)
 

@@ -6,23 +6,12 @@ tách riêng khỏi bq_store.py."""
 
 from __future__ import annotations
 
-import os
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 
 from google.cloud import bigquery
-
-
-def _table(name: str) -> str:
-    project = os.environ["GCP_PROJECT"]
-    dataset = os.environ["BQ_APP_DATASET"]
-    prefix = os.environ.get("BQ_APP_TABLE_PREFIX", "raw_dashboard_builder_")
-    return f"{project}.{dataset}.{prefix}{name}"
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+from storage._common import now as _now
+from storage._common import table as _table
 
 
 def insert_login(client: bigquery.Client, email: str, name: str | None, lark_user_id: str | None) -> None:

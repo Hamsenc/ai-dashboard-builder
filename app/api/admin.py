@@ -43,8 +43,8 @@ def table_usage(days: int = 30):
 @router.post("/embeds/{embed_id}/revoke")
 def revoke_any_embed(embed_id: str, user: str = Depends(get_current_user)):
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
     embeds_store.insert_embed_event(client, embed_id, "revoked", created_by=user)
     invalidate_cache(embed_id)

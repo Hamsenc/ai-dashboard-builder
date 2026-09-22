@@ -432,6 +432,7 @@
 </div>
 </div>
 
+<script src="app.js"></script>
 <script>
 (function initTheme() {
   const saved = localStorage.getItem('theme');
@@ -470,21 +471,6 @@ const DATASET_LABELS = {
 };
 const AGG_FN_LABELS = { SUM: 'Tổng (SUM)', COUNT: 'Đếm (COUNT)', AVG: 'Trung bình (AVG)', MIN: 'Nhỏ nhất (MIN)', MAX: 'Lớn nhất (MAX)' };
 const FILTER_OP_LABELS = { eq: '=', ne: '≠', gt: '>', gte: '≥', lt: '<', lte: '≤' };
-
-async function apiFetch(path, opts = {}) {
-  opts.headers = Object.assign({'Content-Type': 'application/json', 'X-Dev-User': devUser}, opts.headers || {});
-  const res = await fetch(path, opts);
-  if (!res.ok) {
-    const text = await res.text();
-    let message = text;
-    try {
-      const parsed = JSON.parse(text);
-      if (parsed && typeof parsed.detail === 'string') message = parsed.detail;
-    } catch (e) { /* không phải JSON, giữ nguyên text */ }
-    throw new Error(message);
-  }
-  return res.json();
-}
 
 function setButtonBusy(btn, busyText) {
   if (btn.dataset.originalText === undefined) btn.dataset.originalText = btn.textContent;

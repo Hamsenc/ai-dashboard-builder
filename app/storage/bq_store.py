@@ -13,25 +13,12 @@ cao kiểu app state — streaming buffer, quota DML). Mọi bảng ở đây ap
 from __future__ import annotations
 
 import json
-import os
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 
 from google.cloud import bigquery
-
-_TABLE_PREFIX_ENV = "BQ_APP_TABLE_PREFIX"
-
-
-def _table(name: str) -> str:
-    project = os.environ["GCP_PROJECT"]
-    dataset = os.environ["BQ_APP_DATASET"]
-    prefix = os.environ.get(_TABLE_PREFIX_ENV, "raw_dashboard_builder_")
-    return f"{project}.{dataset}.{prefix}{name}"
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+from storage._common import now as _now
+from storage._common import table as _table
 
 
 def _insert(client: bigquery.Client, table_name: str, row: dict[str, Any]) -> None:
@@ -68,19 +55,15 @@ def insert_chat_message(
     role: str,
     content: str | None,
     created_by: str,
-    dashboard_id: str | None = None,
     structured_payload: dict[str, Any] | None = None,
-    llm_model: str | None = None,
 ) -> None:
     row = {
         "message_id": str(uuid.uuid4()),
         "session_id": session_id,
-        "dashboard_id": dashboard_id,
         "turn_index": turn_index,
         "role": role,
         "content": content,
         "structured_payload": json.dumps(structured_payload, ensure_ascii=False) if structured_payload else None,
-        "llm_model": llm_model,
         "created_by": created_by,
         "created_at": _now(),
     }

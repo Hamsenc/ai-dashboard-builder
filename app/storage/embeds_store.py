@@ -10,22 +10,11 @@ app/storage/ddl/010_v_current_dashboard_embeds.sql) — không UPDATE trực ti�
 from __future__ import annotations
 
 import json
-import os
-from datetime import datetime, timezone
 from typing import Any
 
 from google.cloud import bigquery
-
-
-def _table(name: str) -> str:
-    project = os.environ["GCP_PROJECT"]
-    dataset = os.environ["BQ_APP_DATASET"]
-    prefix = os.environ.get("BQ_APP_TABLE_PREFIX", "raw_dashboard_builder_")
-    return f"{project}.{dataset}.{prefix}{name}"
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+from storage._common import now as _now
+from storage._common import table as _table
 
 
 def insert_embed_event(
@@ -89,6 +78,16 @@ def get_current_embed(client: bigquery.Client, embed_id: str) -> dict[str, Any] 
     if not rows:
         return None
     return _row_to_dict(rows[0])
+
+
+def get_active_embed(client: bigquery.Client, embed_id: str) -> dict[str, Any] | None:
+    """Bản ghi hiện tại của embed, hoặc None nếu không tồn tại HOẶC đã bị thu hồi —
+    gộp 2 điều kiện mà mọi API endpoint đều phải kiểm tra cùng nhau trước khi cho
+    xem/sửa/chia sẻ 1 embed."""
+    embed = get_current_embed(client, embed_id)
+    if embed is None or embed["event"] == "revoked":
+        return None
+    return embed
 
 
 def list_current_embeds(client: bigquery.Client, owner_email: str | None = None) -> list[dict[str, Any]]:

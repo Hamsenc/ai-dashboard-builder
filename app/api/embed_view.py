@@ -5,8 +5,6 @@ Lark không có session cookie của app này."""
 
 from __future__ import annotations
 
-import datetime
-import decimal
 import mimetypes
 import re
 import time
@@ -15,6 +13,7 @@ from typing import Any
 from api.catalog import get_bq_client
 from config import Config
 from datasource import bq_meta
+from datasource.preview import _serialize_value
 from embeds import query_spec
 from embeds.gcs_store import download_bytes, download_html
 from execution import bq_client
@@ -126,24 +125,6 @@ def _inject_base_tag(html: str, embed_id: str) -> str:
     return base_tag + html
 
 
-def _serialize_value(v: Any) -> Any:
-    # Cùng logic datasource/preview.py._serialize_value — BigQuery row có thể
-    # chứa date/datetime/Decimal/bytes, không tự JSON-encode được.
-    if v is None:
-        return None
-    if isinstance(v, (datetime.date, datetime.datetime, datetime.time)):
-        return v.isoformat()
-    if isinstance(v, decimal.Decimal):
-        return str(v)
-    if isinstance(v, bytes):
-        return "<binary>"
-    if isinstance(v, dict):
-        return {k: _serialize_value(x) for k, x in v.items()}
-    if isinstance(v, (list, tuple)):
-        return [_serialize_value(x) for x in v]
-    return v
-
-
 @router.get("/{embed_id}")
 def view_embed(embed_id: str, refresh: bool = False):
     client = get_bq_client()
@@ -166,8 +147,8 @@ def get_embed_data_file(embed_id: str):
     """File Excel/CSV user tự tải lên làm dữ liệu sống — server không parse, chỉ host
     lại nguyên bytes; dashboard tự đọc bằng SheetJS (xem .claude/skills/lark-dashboard-embed)."""
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy dashboard này.")
     if not embed.get("data_file_gcs_path"):
         raise HTTPException(404, "Dashboard này không có file dữ liệu.")
@@ -207,8 +188,8 @@ def _run_plan(client, plan: query_spec.QueryPlan) -> dict[str, Any]:
 @router.get("/{embed_id}/data")
 def get_embed_data(embed_id: str):
     client = get_bq_client()
-    embed = embeds_store.get_current_embed(client, embed_id)
-    if embed is None or embed["event"] == "revoked":
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
         raise HTTPException(404, "Không tìm thấy dashboard này.")
     if not embed.get("data_query_spec"):
         raise HTTPException(404, "Dashboard này không có dữ liệu sống.")
