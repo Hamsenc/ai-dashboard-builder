@@ -35,6 +35,11 @@ def list_all_embeds():
     return {"embeds": embeds_store.list_current_embeds(get_bq_client())}
 
 
+@router.get("/table-usage")
+def table_usage(days: int = 30):
+    return {"days": days, **admin_store.list_table_usage_summary(get_bq_client(), days=days)}
+
+
 @router.post("/embeds/{embed_id}/revoke")
 def revoke_any_embed(embed_id: str, user: str = Depends(get_current_user)):
     client = get_bq_client()

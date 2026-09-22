@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Nhúng dashboard — Data Explorer</title>
+<title>LSR Data Explorer</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
 <link rel="stylesheet" href="/theme.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,7 +19,10 @@
     width: 208px; flex-shrink: 0; background: var(--surface-2); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; padding: 20px 12px; gap: 2px; overflow-y: auto;
   }
-  .sidebar-title { font-size: 13.5px; font-weight: 700; padding: 0 10px 18px; color: var(--ink-primary); }
+  .sidebar-title { padding: 0 10px 18px; }
+  .sidebar-logo { display: block; width: 100%; height: auto; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sidebar-logo { filter: invert(1); } }
+  :root[data-theme="dark"] .sidebar-logo { filter: invert(1); }
   .sidebar-link {
     display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
     font-size: 13px; font-weight: 600; color: var(--ink-secondary); text-decoration: none;
@@ -121,6 +125,18 @@
     display: grid; grid-template-columns: 1.3fr 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px;
   }
   .dyn-row.filter-row { grid-template-columns: 1.1fr 0.7fr 1.1fr auto; }
+  .dyn-row.tpl-metric-row { grid-template-columns: 1.2fr 1fr 1.4fr auto; }
+
+  .template-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .template-card {
+    border: 1px solid var(--border); border-radius: 12px; padding: 16px; cursor: pointer;
+    background: var(--surface); text-align: left;
+  }
+  .template-card:hover { border-color: var(--series-1); }
+  .template-card.selected { border-color: var(--series-1); background: var(--series-1-wash); }
+  .template-card .tpl-card-icon { font-size: 22px; margin-bottom: 6px; }
+  .template-card .tpl-card-title { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
+  .template-card .tpl-card-desc { font-size: 12px; color: var(--ink-muted); line-height: 1.45; }
   .dyn-row-remove {
     border: none; background: transparent; color: var(--critical); cursor: pointer; font-size: 16px;
     width: 26px; height: 26px; border-radius: 6px; line-height: 1;
@@ -129,16 +145,38 @@
   .order-row { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: 8px; align-items: center; }
   .limit-row { max-width: 160px; }
 
+  .embed-card:last-child .embed-row { border-bottom: none; }
+  .embed-card:last-child .embed-details { border-bottom: none; }
   .embed-row {
     display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border);
+    cursor: pointer;
   }
-  .embed-row:last-child { border-bottom: none; }
   .embed-row-main { flex: 1; min-width: 0; }
   .embed-row-title { font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .embed-row-chevron { color: var(--ink-muted); font-size: 11px; transition: transform 0.15s; flex-shrink: 0; }
+  .embed-card.expanded .embed-row-chevron { transform: rotate(90deg); }
+  .embed-details {
+    padding: 4px 0 16px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .embed-details-note { white-space: pre-wrap; color: var(--ink-primary); }
+  .embed-details iframe { width: 100%; height: 220px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+  .embed-group-header { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+    color: var(--ink-muted); margin: 18px 0 2px 0; }
+  .embed-group-header:first-child { margin-top: 0; }
+  .share-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+  .share-row .share-email { flex: 1; }
+  .share-form { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .share-form input[type=text] { flex: 1; min-width: 160px; }
   .live-badge {
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
     background: var(--series-1-wash); color: var(--series-1); border-radius: 999px; padding: 2px 8px;
   }
+  .warn-badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+    background: var(--warning-bg); color: var(--warning-ink); border-radius: 999px; padding: 2px 8px;
+    cursor: help;
+  }
+  .warn-note { color: var(--warning-ink); font-size: 12px; margin-top: 4px; }
   .embed-row-meta { font-size: 11.5px; color: var(--ink-muted); margin-top: 3px; }
   .embed-row a { font-size: 12.5px; font-weight: 600; white-space: nowrap; }
   .embed-row-revoke {
@@ -162,7 +200,8 @@
 <body>
 
 <nav class="sidebar">
-  <div class="sidebar-title">🗂️ Data Explorer</div>
+  <div class="sidebar-title"><img src="/logo.png" class="sidebar-logo" alt="Lamson Retail Group"></div>
+  <a href="/guide.html" class="sidebar-link">📘 Hướng dẫn</a>
   <a href="/" class="sidebar-link">🗂️ Tư vấn chọn bảng</a>
   <a href="/embeds.html" class="sidebar-link active">📊 Nhúng dashboard vào Lark</a>
   <a href="/admin.html" class="sidebar-link" id="admin-tab" hidden>🛠️ Quản trị</a>
@@ -178,14 +217,29 @@
 <div class="page-content">
 
 <h1>Nhúng dashboard vào Lark</h1>
-<p class="lead">Upload 1 file HTML dashboard (Claude hoặc AI khác sinh ra) để nhận link chia sẻ
-  công khai, nhúng iframe được vào Lark — ai có link đều xem được, không cần đăng nhập.</p>
+<p class="lead">Upload 1 file HTML dashboard có sẵn, hoặc chọn bảng dữ liệu + vài biểu đồ để app tự tạo
+  dashboard — cả 2 cách đều ra 1 link chia sẻ công khai, nhúng iframe được vào Lark, ai có link đều
+  xem được, không cần đăng nhập.</p>
 
 <div class="card">
   <h2 id="form-title-label">Upload dashboard mới</h2>
   <div class="edit-banner" id="edit-banner" hidden>
     <span>Đang sửa "<strong id="edit-banner-title"></strong>" — file HTML giữ nguyên, chỉ đổi tên/dữ liệu sống.</span>
     <button type="button" class="link-btn" id="cancel-edit-btn">Hủy sửa</button>
+  </div>
+
+  <div class="field" id="create-mode-field">
+    <label class="field-label">Cách tạo dashboard</label>
+    <div class="mode-tabs">
+      <label class="mode-tab">
+        <input type="radio" name="create-mode" value="upload" checked />
+        📁 Upload file HTML có sẵn
+      </label>
+      <label class="mode-tab">
+        <input type="radio" name="create-mode" value="template" />
+        🧩 Dashboard mẫu (không cần code)
+      </label>
+    </div>
   </div>
 
   <div class="field">
@@ -199,6 +253,12 @@
   </div>
 
   <div class="field">
+    <label class="field-label" for="f-group-name">Nhóm (tùy chọn)</label>
+    <input type="text" id="f-group-name" list="group-name-options" placeholder="VD: Sales, Kho — để trống nếu không phân nhóm" />
+    <datalist id="group-name-options"></datalist>
+  </div>
+
+  <div class="field">
     <label class="field-label" for="f-prompt-note">Ghi chú prompt / cấu trúc dữ liệu (tùy chọn)</label>
     <textarea id="f-prompt-note" style="min-height:70px; font-family:inherit;" placeholder="Prompt đã dùng để Claude tạo dashboard này, hoặc mô tả cột/schema file dữ liệu — giúp tra cứu lại sau này."></textarea>
   </div>
@@ -206,11 +266,12 @@
   <div class="field" id="file-field">
     <label class="field-label" for="f-file">File HTML</label>
     <input type="file" id="f-file" accept=".html,text/html" />
+    <iframe id="file-preview-frame" hidden style="width:100%; height:400px; border:1px solid var(--border); border-radius:8px; margin-top:10px; background:#fff;"></iframe>
   </div>
 
-  <div class="field">
+  <div class="field" id="data-source-field">
     <label class="field-label">Dữ liệu sống</label>
-    <div class="mode-tabs">
+    <div class="mode-tabs" id="data-mode-tabs">
       <label class="mode-tab">
         <input type="radio" name="data-mode" value="none" checked />
         Không có
@@ -226,14 +287,14 @@
     </div>
 
     <div id="bigquery-data-panel" class="live-data-panel" hidden>
-      <p class="hint" style="margin-top:0;">
+      <p class="hint" style="margin-top:0;" id="bigquery-panel-hint">
         Trong file HTML, gọi <code>fetch('data')</code> lúc trang load để lấy JSON <code>{columns, rows}</code>
         — app tự chèn <code>&lt;base&gt;</code> nên URL tương đối luôn trỏ đúng chỗ. Nếu dùng nhiều bảng (chế
         độ JSON, tối đa 3 bảng/dashboard) thì <code>fetch('data')</code> trả về <code>{tên_bảng: {columns, rows}, ...}</code>
         thay vì 1 object phẳng.
       </p>
 
-      <div class="mode-tabs">
+      <div class="mode-tabs" id="spec-mode-tabs">
         <label class="mode-tab">
           <input type="radio" name="spec-mode" value="picker" checked />
           🖱️ Chọn bằng dropdown
@@ -309,6 +370,48 @@
     </div>
   </div>
 
+  <div class="field" id="template-builder" hidden>
+    <label class="field-label">Chọn kiểu dashboard</label>
+    <div class="template-gallery" id="template-gallery"></div>
+
+    <div id="tpl-fields-wrapper" hidden style="margin-top:20px;">
+      <div class="sub-label" style="margin-top:0;">Bảng dữ liệu nguồn</div>
+      <select id="tpl-table">
+        <option value="">— Chọn 1 bảng —</option>
+      </select>
+
+      <div id="tpl-fields" hidden>
+        <div class="sub-label" id="tpl-dimension-label"></div>
+        <select id="tpl-dimension"></select>
+        <p class="hint" id="tpl-dimension-hint" style="margin-top:6px;"></p>
+
+        <div class="sub-label">Các chỉ số muốn xem</div>
+        <div id="tpl-metric-rows"></div>
+        <button type="button" class="secondary-btn" id="tpl-add-metric-btn">+ Thêm chỉ số</button>
+
+        <label class="toggle-row" id="tpl-show-table-row" style="margin-top:16px;">
+          <input type="checkbox" id="tpl-show-table" />
+          <div class="toggle-row-text">
+            <div class="toggle-title">Kèm bảng chi tiết</div>
+            <div class="toggle-desc">Hiện thêm 1 bảng liệt kê số liệu theo từng dòng, bên cạnh các biểu đồ ở trên.</div>
+          </div>
+        </label>
+
+        <details style="margin-top:16px;">
+          <summary class="sub-label" style="cursor:pointer; margin-top:0;">Tùy chọn nâng cao</summary>
+          <div style="margin-top:12px;">
+            <div class="sub-label" style="margin-top:0;">Lọc dữ liệu (tùy chọn)</div>
+            <div id="tpl-filter-rows"></div>
+            <button type="button" class="secondary-btn" id="tpl-add-filter-btn">+ Thêm điều kiện lọc</button>
+
+            <div class="sub-label">Giới hạn số dòng trả về</div>
+            <input type="number" id="tpl-limit" class="limit-row" value="500" min="1" max="10000" />
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
   <div class="field-error" id="form-error" hidden></div>
   <button class="primary-btn" id="upload-btn">Upload</button>
   <div id="upload-result"></div>
@@ -317,9 +420,9 @@
 <div class="card">
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
     <h2 id="list-title" style="margin:0;">Dashboard của tôi</h2>
-    <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; cursor:pointer;">
-      <input type="checkbox" id="show-all-toggle" checked style="accent-color:var(--series-1); cursor:pointer;" />
-      Hiện của tất cả mọi người
+    <label id="show-all-wrapper" hidden style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; cursor:pointer;">
+      <input type="checkbox" id="show-all-toggle" style="accent-color:var(--series-1); cursor:pointer;" />
+      Hiện của tất cả mọi người (admin)
     </label>
   </div>
   <div id="embed-list"><p class="empty-state">Đang tải...</p></div>
@@ -411,27 +514,33 @@ function bqTypeToInputType(bqType) {
 
 async function ensureTablesLoaded() {
   if (tablesData.length > 0) return;
-  const selectEl = document.getElementById('spec-table');
   try {
     const data = await apiFetch('/api/tables');
     tablesData = data.tables || [];
-    const byDataset = {};
-    tablesData.forEach(t => { (byDataset[t.dataset] = byDataset[t.dataset] || []).push(t); });
-    Object.keys(byDataset).sort().forEach(dataset => {
-      const group = document.createElement('optgroup');
-      group.label = DATASET_LABELS[dataset] || dataset;
-      byDataset[dataset].forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.table_id;
-        opt.textContent = t.table_name;
-        group.appendChild(opt);
-      });
-      selectEl.appendChild(group);
-    });
   } catch (e) {
     document.getElementById('form-error').hidden = false;
     document.getElementById('form-error').textContent = 'Lỗi tải danh sách bảng: ' + e.message;
   }
+}
+
+// Lắp <optgroup>/<option> từ tablesData vào 1 <select> — dùng chung cho picker "Dữ liệu
+// sống" (#spec-table) lẫn picker "Dashboard mẫu" (#tpl-table), mỗi select chỉ lắp 1 lần.
+function populateTableSelect(selectEl) {
+  if (selectEl.dataset.populated) return;
+  selectEl.dataset.populated = '1';
+  const byDataset = {};
+  tablesData.forEach(t => { (byDataset[t.dataset] = byDataset[t.dataset] || []).push(t); });
+  Object.keys(byDataset).sort().forEach(dataset => {
+    const group = document.createElement('optgroup');
+    group.label = DATASET_LABELS[dataset] || dataset;
+    byDataset[dataset].forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.table_id;
+      opt.textContent = t.table_name;
+      group.appendChild(opt);
+    });
+    selectEl.appendChild(group);
+  });
 }
 
 function currentDataMode() {
@@ -442,11 +551,40 @@ async function applyDataModeVisibility() {
   const mode = currentDataMode();
   document.getElementById('bigquery-data-panel').hidden = mode !== 'bigquery';
   document.getElementById('datafile-data-panel').hidden = mode !== 'datafile';
-  if (mode === 'bigquery') await ensureTablesLoaded();
+  if (mode === 'bigquery') {
+    await ensureTablesLoaded();
+    populateTableSelect(document.getElementById('spec-table'));
+  }
 }
 
 document.querySelectorAll('input[name="data-mode"]').forEach(radio => {
   radio.addEventListener('change', applyDataModeVisibility);
+});
+
+/* ============================== Toggle "Cách tạo dashboard" (upload vs mẫu) ============================== */
+
+function currentCreateMode() {
+  return document.querySelector('input[name="create-mode"]:checked').value;
+}
+
+async function applyCreateModeVisibility() {
+  const isTemplate = currentCreateMode() === 'template';
+  document.getElementById('file-field').hidden = isTemplate;
+  document.getElementById('data-source-field').hidden = isTemplate;
+  document.getElementById('template-builder').hidden = !isTemplate;
+  if (isTemplate) {
+    if (!document.getElementById('template-gallery').children.length) renderTemplateGallery();
+    await ensureTablesLoaded();
+    populateTableSelect(document.getElementById('tpl-table'));
+  }
+  if (!editingEmbedId) {
+    document.getElementById('form-title-label').textContent = isTemplate ? 'Tạo dashboard mẫu mới' : 'Upload dashboard mới';
+    document.getElementById('upload-btn').textContent = isTemplate ? 'Tạo dashboard' : 'Upload';
+  }
+}
+
+document.querySelectorAll('input[name="create-mode"]').forEach(radio => {
+  radio.addEventListener('change', applyCreateModeVisibility);
 });
 
 function selectTable(tableId) {
@@ -566,6 +704,224 @@ function refreshOrderByOptions() {
     names.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n}</option>`).join('');
 }
 
+/* ============================== "Dashboard mẫu" — chọn 1 template cố định + chỉ điền data ============================== */
+// Cố tình KHÔNG dùng chung state/markup với picker "Dữ liệu sống" ở trên (selectedTable,
+// #spec-table...) — 2 picker phục vụ 2 đối tượng khác nhau. Bản đầu tiên của tính năng này
+// để user tự chọn loại biểu đồ cho từng chỉ số (KPI/cột/đường) — user feedback: "rối, không
+// biết phải làm sao". Sửa lại theo hướng "kho template cố định": user chỉ chọn 1 template có
+// sẵn (đã quyết định sẵn loại biểu đồ/bố cục) rồi điền đúng cột dữ liệu của họ vào, không phải
+// tự quyết định biểu đồ nào hợp với cái gì.
+
+const DASHBOARD_TEMPLATES = [
+  {
+    id: 'time_series', icon: '📈', name: 'Xu hướng theo thời gian',
+    desc: 'Theo dõi số liệu biến động qua các ngày/tháng — VD: doanh thu theo ngày.',
+    dimensionLabel: 'Cột ngày/thời gian', dimensionRequired: true,
+    dimensionHint: 'Chọn cột kiểu ngày, VD: date, order_date...',
+    dimensionTypes: ['DATE', 'DATETIME', 'TIMESTAMP'],
+    chartType: 'line', orderDirection: 'asc', orderByDimension: true, forceTable: false,
+  },
+  {
+    id: 'breakdown', icon: '📊', name: 'So sánh theo nhóm',
+    desc: 'So sánh số liệu giữa các nhóm — VD: theo brand, theo kênh bán, theo kho.',
+    dimensionLabel: 'Cột nhóm để so sánh', dimensionRequired: true,
+    dimensionHint: 'Chọn cột kiểu chữ, VD: brand_id, channel_key...',
+    dimensionTypes: ['STRING', 'BOOL'],
+    chartType: 'bar', orderDirection: 'desc', orderByDimension: false, forceTable: false,
+  },
+  {
+    id: 'table_only', icon: '📋', name: 'Bảng dữ liệu chi tiết',
+    desc: 'Chỉ cần bảng số liệu + vài số tổng quan, không cần vẽ biểu đồ.',
+    dimensionLabel: 'Cột nhóm theo (tùy chọn)', dimensionRequired: false,
+    dimensionHint: 'Để trống nếu chỉ cần vài số tổng chung, không chia nhóm.',
+    dimensionTypes: null,
+    chartType: null, orderDirection: 'desc', orderByDimension: false, forceTable: true,
+  },
+];
+const _TPL_NUMERIC_TYPES = ['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC'];
+const TPL_FN_LABELS = { SUM: 'Tổng (SUM)', COUNT: 'Đếm (COUNT)', AVG: 'Trung bình (AVG)' };
+const TPL_FN_SHORT = { SUM: 'Tổng', COUNT: 'Số lượng', AVG: 'Trung bình' };
+
+// Tên cột kiểu snake_case (VD: net_revenue_success) nhìn kỹ thuật/xấu khi để thẳng làm tiêu
+// đề hiển thị cho người không rành SQL — chỉ đổi dấu gạch dưới thành khoảng trắng, không đoán
+// case chữ hoa/thường (tránh đoán sai viết tắt như GMV/SKU).
+function prettifyColumnLabel(col) {
+  return col.replace(/_/g, ' ');
+}
+
+let selectedTemplateId = null;
+let selectedTemplateTable = null;
+let tplMetricRowCount = 0;
+
+function currentTemplate() {
+  return DASHBOARD_TEMPLATES.find(t => t.id === selectedTemplateId) || null;
+}
+
+function renderTemplateGallery() {
+  const gallery = document.getElementById('template-gallery');
+  gallery.innerHTML = '';
+  DASHBOARD_TEMPLATES.forEach(tpl => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'template-card';
+    card.dataset.id = tpl.id;
+    card.innerHTML = `<div class="tpl-card-icon">${tpl.icon}</div>`
+      + `<div class="tpl-card-title">${tpl.name}</div>`
+      + `<div class="tpl-card-desc">${tpl.desc}</div>`;
+    card.onclick = () => selectDashboardTemplate(tpl.id);
+    gallery.appendChild(card);
+  });
+}
+
+async function selectDashboardTemplate(id) {
+  selectedTemplateId = id;
+  const tpl = currentTemplate();
+  document.querySelectorAll('.template-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
+  document.getElementById('tpl-fields-wrapper').hidden = false;
+  document.getElementById('tpl-dimension-label').textContent = tpl.dimensionLabel;
+  document.getElementById('tpl-dimension-hint').textContent = tpl.dimensionHint;
+  document.getElementById('tpl-show-table-row').hidden = tpl.forceTable;
+  if (selectedTemplateTable) renderTplDimensionOptions();
+  await ensureTablesLoaded();
+  populateTableSelect(document.getElementById('tpl-table'));
+}
+
+function tplNumericColumnOptionsHtml() {
+  return (selectedTemplateTable.columns || [])
+    .filter(c => _TPL_NUMERIC_TYPES.includes(c.type))
+    .map(c => `<option value="${c.name}">${c.name}</option>`)
+    .join('');
+}
+
+function renderTplDimensionOptions() {
+  const tpl = currentTemplate();
+  const allCols = selectedTemplateTable.columns || [];
+  const matching = tpl.dimensionTypes ? allCols.filter(c => tpl.dimensionTypes.includes(c.type)) : allCols;
+  const cols = matching.length ? matching : allCols; // không có cột đúng kiểu mong đợi -> vẫn cho chọn hết, còn hơn chặn cứng
+  const placeholder = tpl.dimensionRequired ? '— Chọn 1 cột —' : '— Không chia nhóm, chỉ xem 1 tổng chung —';
+  const sel = document.getElementById('tpl-dimension');
+  sel.innerHTML = `<option value="">${placeholder}</option>` + cols.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+}
+
+function selectTemplateTable(tableId) {
+  selectedTemplateTable = tablesData.find(t => t.table_id === tableId) || null;
+  document.getElementById('tpl-fields').hidden = !selectedTemplateTable;
+  document.getElementById('tpl-metric-rows').innerHTML = '';
+  document.getElementById('tpl-filter-rows').innerHTML = '';
+  tplMetricRowCount = 0;
+  if (!selectedTemplateTable) return;
+  renderTplDimensionOptions();
+  addMetricRow();
+}
+document.getElementById('tpl-table').addEventListener('change', e => selectTemplateTable(e.target.value));
+
+function addMetricRow() {
+  const idx = tplMetricRowCount++;
+  const row = document.createElement('div');
+  row.className = 'dyn-row tpl-metric-row';
+  row.dataset.idx = idx;
+  const numericOptions = tplNumericColumnOptionsHtml();
+  row.innerHTML = `
+    <select class="tpl-metric-column">${numericOptions}</select>
+    <select class="tpl-metric-fn">${Object.entries(TPL_FN_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+    <input type="text" class="tpl-metric-title" placeholder="Tiêu đề hiển thị" />
+    <button type="button" class="dyn-row-remove" title="Xóa">×</button>
+  `;
+  const titleInput = row.querySelector('.tpl-metric-title');
+  const updateTitle = () => {
+    if (titleInput.dataset.userEdited) return;
+    const col = row.querySelector('.tpl-metric-column').value;
+    const fn = row.querySelector('.tpl-metric-fn').value;
+    titleInput.value = col ? `${TPL_FN_SHORT[fn]} ${prettifyColumnLabel(col)}` : '';
+  };
+  row.querySelector('.tpl-metric-column').addEventListener('change', updateTitle);
+  row.querySelector('.tpl-metric-fn').addEventListener('change', updateTitle);
+  titleInput.addEventListener('input', () => { titleInput.dataset.userEdited = '1'; });
+  row.querySelector('.dyn-row-remove').addEventListener('click', () => row.remove());
+  document.getElementById('tpl-metric-rows').appendChild(row);
+  updateTitle();
+}
+document.getElementById('tpl-add-metric-btn').addEventListener('click', () => {
+  if (!selectedTemplateTable) { alert('Chọn bảng dữ liệu nguồn trước.'); return; }
+  if (!tplNumericColumnOptionsHtml()) { alert('Bảng này không có cột số (INT64/FLOAT64/NUMERIC) để tính toán.'); return; }
+  addMetricRow();
+});
+
+function addTplFilterRow() {
+  const row = document.createElement('div');
+  row.className = 'dyn-row filter-row';
+  row.innerHTML = `
+    <select class="tpl-filter-column">${(selectedTemplateTable.columns || []).map(c => `<option value="${c.name}">${c.name} (${c.type})</option>`).join('')}</select>
+    <select class="tpl-filter-op">${Object.entries(FILTER_OP_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+    <span class="tpl-filter-value-slot"></span>
+    <button type="button" class="dyn-row-remove" title="Xóa">×</button>
+  `;
+  const renderValueInput = () => {
+    const colName = row.querySelector('.tpl-filter-column').value;
+    const col = (selectedTemplateTable.columns || []).find(c => c.name === colName);
+    const bqType = col ? col.type : 'STRING';
+    const slot = row.querySelector('.tpl-filter-value-slot');
+    slot.innerHTML = '';
+    const input = document.createElement('input');
+    input.type = bqTypeToInputType(bqType);
+    input.className = 'tpl-filter-value';
+    input.placeholder = 'giá trị';
+    input.dataset.bqType = bqType;
+    slot.appendChild(input);
+  };
+  row.querySelector('.tpl-filter-column').addEventListener('change', renderValueInput);
+  row.querySelector('.dyn-row-remove').addEventListener('click', () => row.remove());
+  document.getElementById('tpl-filter-rows').appendChild(row);
+  renderValueInput();
+}
+document.getElementById('tpl-add-filter-btn').addEventListener('click', () => {
+  if (!selectedTemplateTable) { alert('Chọn bảng dữ liệu nguồn trước.'); return; }
+  addTplFilterRow();
+});
+
+function buildSpecAndWidgetsFromTemplateForm() {
+  const tpl = currentTemplate();
+  const dimension = document.getElementById('tpl-dimension').value;
+  const aggregations = [];
+  const widgets = [];
+  const usedAliases = new Set();
+  Array.from(document.querySelectorAll('#tpl-metric-rows .tpl-metric-row')).forEach(row => {
+    const column = row.querySelector('.tpl-metric-column').value;
+    const fn = row.querySelector('.tpl-metric-fn').value;
+    let alias = `${fn.toLowerCase()}_${column}`;
+    let n = 2;
+    while (usedAliases.has(alias)) alias = `${fn.toLowerCase()}_${column}_${n++}`;
+    usedAliases.add(alias);
+    aggregations.push({ column, fn, alias });
+    const title = row.querySelector('.tpl-metric-title').value.trim() || `${TPL_FN_SHORT[fn]} ${prettifyColumnLabel(column)}`;
+    widgets.push({ type: 'kpi', title, value_column: alias, agg: fn.toLowerCase() });
+    if (tpl.chartType) widgets.push({ type: tpl.chartType, title, label_column: dimension, value_column: alias });
+  });
+  const filters = Array.from(document.querySelectorAll('#tpl-filter-rows .dyn-row')).map(row => {
+    const valueInput = row.querySelector('.tpl-filter-value');
+    let value = valueInput.value;
+    const bqType = valueInput.dataset.bqType;
+    if (_TPL_NUMERIC_TYPES.includes(bqType)) value = Number(value);
+    return { column: row.querySelector('.tpl-filter-column').value, op: row.querySelector('.tpl-filter-op').value, value, type: bqType };
+  });
+  const spec = {
+    table_id: selectedTemplateTable.table_id,
+    columns: dimension ? [dimension] : [],
+    aggregations,
+    limit: parseInt(document.getElementById('tpl-limit').value, 10) || 500,
+  };
+  if (filters.length) spec.filters = filters;
+  if (dimension) {
+    // time_series: sắp theo đúng cột ngày (chronological) — sắp theo giá trị chỉ số
+    // (như breakdown) sẽ làm biểu đồ đường nối các điểm theo thứ tự ngẫu nhiên, nhìn
+    // như zigzag vô nghĩa. breakdown/table_only: sắp theo chỉ số đầu tiên, nhóm to nhất lên trước.
+    const orderColumn = tpl.orderByDimension ? dimension : (aggregations[0] && aggregations[0].alias);
+    if (orderColumn) spec.order_by = [{ column: orderColumn, direction: tpl.orderDirection }];
+  }
+  if (tpl.forceTable || document.getElementById('tpl-show-table').checked) widgets.push({ type: 'table', title: 'Bảng chi tiết' });
+  return { spec, widgets };
+}
+
 function buildSpecFromForm() {
   if (!selectedTable) return null;
   const columns = getSelectedColumnNames();
@@ -631,6 +987,18 @@ function resetLiveDataFields() {
   document.querySelector('input[name="spec-mode"][value="picker"]').checked = true;
   document.getElementById('picker-mode').hidden = false;
   document.getElementById('json-mode').hidden = true;
+
+  selectedTemplateId = null;
+  document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('tpl-fields-wrapper').hidden = true;
+  document.getElementById('tpl-table').value = '';
+  document.getElementById('tpl-fields').hidden = true;
+  selectedTemplateTable = null;
+  document.getElementById('tpl-metric-rows').innerHTML = '';
+  document.getElementById('tpl-filter-rows').innerHTML = '';
+  tplMetricRowCount = 0;
+  document.getElementById('tpl-show-table').checked = false;
+  document.getElementById('tpl-limit').value = 500;
 }
 
 async function loadSpecIntoPicker(spec) {
@@ -654,6 +1022,9 @@ async function loadSpecIntoPicker(spec) {
 
 async function enterEditMode(embed) {
   editingEmbedId = embed.embed_id;
+  document.getElementById('create-mode-field').hidden = true;
+  document.querySelector('input[name="create-mode"][value="upload"]').checked = true;
+  applyCreateModeVisibility();
   document.getElementById('form-title-label').textContent = 'Sửa dashboard';
   document.getElementById('file-field').hidden = true;
   document.getElementById('edit-banner-title').textContent = embed.title || '(không có tên)';
@@ -661,6 +1032,7 @@ async function enterEditMode(embed) {
   document.getElementById('f-title').value = embed.title || '';
   document.getElementById('f-owner-name').value = embed.owner_name || '';
   document.getElementById('f-prompt-note').value = embed.prompt_note || '';
+  document.getElementById('f-group-name').value = embed.group_name || '';
   document.getElementById('upload-btn').textContent = 'Lưu thay đổi';
   document.getElementById('upload-result').className = ''; document.getElementById('upload-result').innerHTML = '';
   document.getElementById('form-error').hidden = true;
@@ -691,16 +1063,36 @@ async function enterEditMode(embed) {
 
 function exitEditMode() {
   editingEmbedId = null;
-  document.getElementById('form-title-label').textContent = 'Upload dashboard mới';
+  document.getElementById('create-mode-field').hidden = false;
+  document.querySelector('input[name="create-mode"][value="upload"]').checked = true;
   document.getElementById('file-field').hidden = false;
   document.getElementById('edit-banner').hidden = true;
-  document.getElementById('upload-btn').textContent = 'Upload';
   document.getElementById('f-title').value = '';
   document.getElementById('f-owner-name').value = '';
   document.getElementById('f-prompt-note').value = '';
+  document.getElementById('f-group-name').value = '';
   document.getElementById('f-file').value = '';
   resetLiveDataFields();
+  clearFilePreview();
+  applyCreateModeVisibility();
 }
+
+let filePreviewUrl = null;
+function clearFilePreview() {
+  const frame = document.getElementById('file-preview-frame');
+  frame.hidden = true;
+  frame.src = '';
+  if (filePreviewUrl) { URL.revokeObjectURL(filePreviewUrl); filePreviewUrl = null; }
+}
+document.getElementById('f-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  clearFilePreview();
+  if (!file) return;
+  filePreviewUrl = URL.createObjectURL(file);
+  const frame = document.getElementById('file-preview-frame');
+  frame.src = filePreviewUrl;
+  frame.hidden = false;
+});
 
 document.getElementById('cancel-edit-btn').addEventListener('click', exitEditMode);
 
@@ -746,67 +1138,285 @@ function renderEmbeds(embeds) {
     listEl.appendChild(p);
     return;
   }
+  // Cập nhật gợi ý nhóm (datalist) từ chính danh sách đang có, đỡ phải gõ lại tên nhóm cũ.
+  const groupOptionsEl = document.getElementById('group-name-options');
+  groupOptionsEl.innerHTML = '';
+  Array.from(new Set(embeds.map(e => e.group_name).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'vi'))
+    .forEach(name => { const opt = document.createElement('option'); opt.value = name; groupOptionsEl.appendChild(opt); });
+
+  const groups = new Map(); // tên nhóm ('' = chưa phân nhóm) -> [embed, ...]
   embeds.forEach((embed) => {
-    const row = document.createElement('div');
-    row.className = 'embed-row';
+    const key = embed.group_name || '';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(embed);
+  });
+  const groupNames = Array.from(groups.keys()).filter(k => k !== '').sort((a, b) => a.localeCompare(b, 'vi'));
+  if (groups.has('')) groupNames.push('');
+  const showHeaders = groupNames.length > 1;
 
-    const main = document.createElement('div');
-    main.className = 'embed-row-main';
-    const title = document.createElement('div');
-    title.className = 'embed-row-title';
-    const titleText = document.createElement('span');
-    titleText.textContent = embed.title || '(không có tên)'; // untrusted content -> textContent
-    title.appendChild(titleText);
-    if (embed.data_query_spec) {
-      const badge = document.createElement('span');
-      badge.className = 'live-badge';
-      badge.textContent = 'Dữ liệu sống (BigQuery)';
-      title.appendChild(badge);
+  groupNames.forEach((name) => {
+    if (showHeaders) {
+      const header = document.createElement('h3');
+      header.className = 'embed-group-header';
+      header.textContent = name || 'Chưa phân nhóm';
+      listEl.appendChild(header);
     }
-    if (embed.data_file_gcs_path) {
-      const badge = document.createElement('span');
-      badge.className = 'live-badge';
-      badge.textContent = 'File dữ liệu';
-      title.appendChild(badge);
-    }
-    const meta = document.createElement('div');
-    meta.className = 'embed-row-meta';
-    const metaParts = [embed.created_by];
-    if (embed.owner_name) metaParts.push(embed.owner_name);
-    metaParts.push(new Date(embed.event_at).toLocaleString('vi-VN'));
-    meta.textContent = metaParts.join(' · ');
-    main.appendChild(title);
-    main.appendChild(meta);
-    if (embed.prompt_note) {
-      const note = document.createElement('div');
-      note.className = 'embed-row-meta';
-      note.style.whiteSpace = 'pre-wrap';
-      note.textContent = embed.prompt_note; // untrusted content -> textContent
-      main.appendChild(note);
-    }
+    groups.get(name).forEach((embed) => listEl.appendChild(renderEmbedCard(embed)));
+  });
+}
 
-    const link = document.createElement('a');
-    link.href = `/d/${embed.embed_id}`;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.textContent = 'Xem link →';
+const _PERMISSION_LABELS = {owner: null, admin: 'Admin', edit: 'Được chia sẻ · Có thể sửa', view: 'Được chia sẻ · Chỉ xem'};
 
+function renderEmbedCard(embed) {
+  const card = document.createElement('div');
+  card.className = 'embed-card';
+
+  const row = document.createElement('div');
+  row.className = 'embed-row';
+
+  const chevron = document.createElement('span');
+  chevron.className = 'embed-row-chevron';
+  chevron.textContent = '▶';
+
+  const main = document.createElement('div');
+  main.className = 'embed-row-main';
+  const title = document.createElement('div');
+  title.className = 'embed-row-title';
+  const titleText = document.createElement('span');
+  titleText.textContent = embed.title || '(không có tên)'; // untrusted content -> textContent
+  title.appendChild(titleText);
+  if (embed.data_query_spec) {
+    const badge = document.createElement('span');
+    badge.className = 'live-badge';
+    badge.textContent = 'Dữ liệu sống (BigQuery)';
+    title.appendChild(badge);
+  }
+  if (embed.data_file_gcs_path) {
+    const badge = document.createElement('span');
+    badge.className = 'live-badge';
+    badge.textContent = 'File dữ liệu';
+    title.appendChild(badge);
+  }
+  if (embed.schema_warning) {
+    const badge = document.createElement('span');
+    badge.className = 'warn-badge';
+    badge.textContent = '⚠ Bảng BigQuery đổi cột';
+    badge.title = embed.schema_warning; // untrusted content -> title attr, không innerHTML
+    title.appendChild(badge);
+  }
+  const permLabel = _PERMISSION_LABELS[embed.permission];
+  if (permLabel) {
+    const badge = document.createElement('span');
+    badge.className = 'live-badge';
+    badge.textContent = permLabel;
+    title.appendChild(badge);
+  }
+  const meta = document.createElement('div');
+  meta.className = 'embed-row-meta';
+  const metaParts = [embed.owner_name || embed.owner_email || embed.created_by];
+  metaParts.push(new Date(embed.event_at).toLocaleString('vi-VN'));
+  meta.textContent = metaParts.join(' · ');
+  main.appendChild(title);
+  main.appendChild(meta);
+
+  const link = document.createElement('a');
+  link.href = `/d/${embed.embed_id}`;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = 'Xem link →';
+  link.onclick = (e) => e.stopPropagation();
+
+  row.appendChild(chevron);
+  row.appendChild(main);
+  row.appendChild(link);
+
+  const canEdit = embed.permission === 'owner' || embed.permission === 'admin' || embed.permission === 'edit';
+  const canRevoke = embed.permission === 'owner' || embed.permission === 'admin';
+  if (canEdit) {
     const editBtn = document.createElement('button');
     editBtn.className = 'embed-row-edit';
     editBtn.textContent = '✏️ Sửa';
-    editBtn.onclick = () => enterEditMode(embed);
-
+    editBtn.onclick = (e) => { e.stopPropagation(); enterEditMode(embed); };
+    row.appendChild(editBtn);
+  }
+  if (canRevoke) {
     const revokeBtn = document.createElement('button');
     revokeBtn.className = 'embed-row-revoke';
     revokeBtn.textContent = 'Thu hồi';
-    revokeBtn.onclick = () => revokeEmbed(embed.embed_id, revokeBtn);
-
-    row.appendChild(main);
-    row.appendChild(link);
-    row.appendChild(editBtn);
+    revokeBtn.onclick = (e) => { e.stopPropagation(); revokeEmbed(embed.embed_id, revokeBtn); };
     row.appendChild(revokeBtn);
-    listEl.appendChild(row);
+  }
+
+  const details = document.createElement('div');
+  details.className = 'embed-details';
+  details.hidden = true;
+
+  row.onclick = () => {
+    const willExpand = details.hidden;
+    details.hidden = !willExpand;
+    card.classList.toggle('expanded', willExpand);
+    if (willExpand && !details.dataset.loaded) {
+      details.dataset.loaded = '1';
+      renderEmbedDetails(details, embed, embed.permission === 'owner' || embed.permission === 'admin');
+    }
+  };
+
+  card.appendChild(row);
+  card.appendChild(details);
+  return card;
+}
+
+function renderEmbedDetails(container, embed, canManageShares) {
+  if (embed.prompt_note) {
+    const label = document.createElement('div');
+    label.innerHTML = '<strong>Ghi chú prompt:</strong>';
+    const note = document.createElement('div');
+    note.className = 'embed-details-note';
+    note.textContent = embed.prompt_note; // untrusted content -> textContent
+    container.appendChild(label);
+    container.appendChild(note);
+  }
+
+  const linkLine = document.createElement('div');
+  const linkA = document.createElement('a');
+  linkA.href = `/d/${embed.embed_id}`;
+  linkA.target = '_blank';
+  linkA.rel = 'noopener';
+  linkA.textContent = `${location.origin}/d/${embed.embed_id}`;
+  linkLine.innerHTML = '<strong>Link dashboard: </strong>';
+  linkLine.appendChild(linkA);
+  container.appendChild(linkLine);
+
+  const dataLine = document.createElement('div');
+  const dataLabel = document.createElement('strong');
+  if (embed.data_file_gcs_path) {
+    dataLabel.textContent = 'File dữ liệu: ';
+    const dl = document.createElement('a');
+    dl.href = `/d/${embed.embed_id}/data-file`;
+    dl.textContent = embed.data_file_name || 'Tải file dữ liệu'; // untrusted content -> textContent
+    dataLine.appendChild(dataLabel);
+    dataLine.appendChild(dl);
+  } else if (embed.data_query_spec) {
+    dataLabel.textContent = 'Bảng BigQuery: ';
+    dataLine.appendChild(dataLabel);
+    dataLine.appendChild(document.createTextNode(query_spec_summary(embed.data_query_spec))); // untrusted content -> textContent
+  } else {
+    dataLabel.textContent = 'Nguồn dữ liệu: ';
+    dataLine.appendChild(dataLabel);
+    dataLine.appendChild(document.createTextNode('không có (dashboard tĩnh).'));
+  }
+  container.appendChild(dataLine);
+  if (embed.schema_warning) {
+    const warn = document.createElement('div');
+    warn.className = 'warn-note';
+    warn.textContent = '⚠ ' + embed.schema_warning; // untrusted content -> textContent
+    container.appendChild(warn);
+  }
+
+  const previewLabel = document.createElement('div');
+  previewLabel.innerHTML = '<strong>Xem trước:</strong>';
+  const iframe = document.createElement('iframe');
+  iframe.src = `/d/${embed.embed_id}`;
+  container.appendChild(previewLabel);
+  container.appendChild(iframe);
+
+  if (canManageShares) {
+    const shareLabel = document.createElement('div');
+    shareLabel.innerHTML = '<strong>Chia sẻ:</strong>';
+    const shareList = document.createElement('div');
+    shareList.textContent = 'Đang tải...';
+    container.appendChild(shareLabel);
+    container.appendChild(shareList);
+    loadShares(embed.embed_id, shareList);
+  }
+}
+
+function _shareTargetLabel(sharedWith) {
+  return sharedWith === '*' ? 'Tất cả user nội bộ' : sharedWith;
+}
+
+async function loadShares(embedId, container) {
+  try {
+    const {shares} = await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}/shares`);
+    renderShareList(embedId, container, shares);
+  } catch (e) {
+    container.textContent = 'Lỗi tải danh sách chia sẻ: ' + e.message;
+  }
+}
+
+function renderShareList(embedId, container, shares) {
+  container.innerHTML = '';
+
+  if (!shares.length) {
+    const empty = document.createElement('div');
+    empty.className = 'embed-row-meta';
+    empty.textContent = 'Chưa chia sẻ cho ai.';
+    container.appendChild(empty);
+  }
+  shares.forEach((share) => {
+    const row = document.createElement('div');
+    row.className = 'share-row';
+    const emailEl = document.createElement('span');
+    emailEl.className = 'share-email';
+    emailEl.textContent = `${_shareTargetLabel(share.shared_with)} — ${share.permission === 'edit' ? 'Có thể sửa' : 'Chỉ xem'}`;
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'embed-row-revoke';
+    removeBtn.textContent = 'Gỡ';
+    removeBtn.onclick = async (e) => {
+      e.stopPropagation();
+      removeBtn.disabled = true;
+      try {
+        await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}/unshare`, {
+          method: 'POST', body: JSON.stringify({shared_with: share.shared_with}),
+        });
+        await loadShares(embedId, container);
+      } catch (err) {
+        alert('Lỗi gỡ chia sẻ: ' + err.message);
+        removeBtn.disabled = false;
+      }
+    };
+    row.appendChild(emailEl);
+    row.appendChild(removeBtn);
+    container.appendChild(row);
   });
+
+  const form = document.createElement('div');
+  form.className = 'share-form';
+  const emailInput = document.createElement('input');
+  emailInput.type = 'text';
+  emailInput.placeholder = 'Email, hoặc * = tất cả user nội bộ';
+  const permSelect = document.createElement('select');
+  permSelect.innerHTML = '<option value="view">Chỉ xem</option><option value="edit">Có thể sửa</option>';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'secondary-btn';
+  addBtn.textContent = 'Chia sẻ';
+  addBtn.onclick = async (e) => {
+    e.stopPropagation();
+    const sharedWith = emailInput.value.trim();
+    if (!sharedWith) return;
+    addBtn.disabled = true;
+    try {
+      await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}/shares`, {
+        method: 'POST', body: JSON.stringify({shared_with: sharedWith, permission: permSelect.value}),
+      });
+      emailInput.value = '';
+      await loadShares(embedId, container);
+    } catch (err) {
+      alert('Lỗi chia sẻ: ' + err.message);
+    } finally {
+      addBtn.disabled = false;
+    }
+  };
+  form.appendChild(emailInput);
+  form.appendChild(permSelect);
+  form.appendChild(addBtn);
+  container.appendChild(form);
+}
+
+function query_spec_summary(spec) {
+  // spec 1 bảng cũ: {table_id, columns, ...}. Spec nhiều bảng mới: {tênBảng: {table_id, columns, ...}}
+  const entries = spec.table_id ? [spec] : Object.values(spec);
+  return entries.map(s => `${s.table_id} (${(s.columns || []).join(', ') || '*'})`).join(', ');
 }
 
 async function revokeEmbed(embedId, btn) {
@@ -836,12 +1446,36 @@ document.getElementById('upload-btn').onclick = async () => {
   const title = document.getElementById('f-title').value.trim();
   const ownerName = document.getElementById('f-owner-name').value.trim();
   const promptNote = document.getElementById('f-prompt-note').value.trim();
+  const groupName = document.getElementById('f-group-name').value.trim();
   const fileInput = document.getElementById('f-file');
   const dataFileInput = document.getElementById('f-data-file');
   const dataMode = currentDataMode();
   const advancedEl = document.getElementById('f-spec-advanced');
 
   if (!title) { errorEl.hidden = false; errorEl.textContent = 'Cần nhập tên dashboard.'; return; }
+
+  if (!editingEmbedId && currentCreateMode() === 'template') {
+    const tpl = currentTemplate();
+    if (!tpl) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn 1 kiểu dashboard trước.'; return; }
+    if (!selectedTemplateTable) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn bảng dữ liệu nguồn.'; return; }
+    const metricRows = document.querySelectorAll('#tpl-metric-rows .tpl-metric-row');
+    if (!metricRows.length) { errorEl.hidden = false; errorEl.textContent = 'Cần thêm ít nhất 1 chỉ số.'; return; }
+    for (const row of metricRows) {
+      if (!row.querySelector('.tpl-metric-column').value) {
+        errorEl.hidden = false; errorEl.textContent = 'Bảng này không có cột số để tính toán — hãy dùng chế độ Upload file HTML.';
+        return;
+      }
+    }
+    const dimension = document.getElementById('tpl-dimension').value;
+    if (tpl.dimensionRequired && !dimension) {
+      errorEl.hidden = false; errorEl.textContent = `Cần chọn "${tpl.dimensionLabel}" cho kiểu dashboard này.`;
+      return;
+    }
+    const { spec, widgets } = buildSpecAndWidgetsFromTemplateForm();
+    await submitGenerate(title, ownerName, promptNote, groupName, spec, widgets, btn, resultEl);
+    return;
+  }
+
   if (!editingEmbedId && !fileInput.files[0]) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn 1 file HTML.'; return; }
   if (!editingEmbedId && dataMode === 'datafile' && !dataFileInput.files[0]) {
     errorEl.hidden = false; errorEl.textContent = 'Cần chọn file dữ liệu (.xlsx/.xls/.csv).'; return;
@@ -874,18 +1508,69 @@ document.getElementById('upload-btn').onclick = async () => {
   const dataFile = dataMode === 'datafile' ? dataFileInput.files[0] : null;
 
   if (editingEmbedId) {
-    await saveEdit(editingEmbedId, title, ownerName, promptNote, specObj, dataFile, btn, resultEl);
+    await saveEdit(editingEmbedId, title, ownerName, promptNote, groupName, specObj, dataFile, btn, resultEl);
   } else {
-    await submitCreate(title, ownerName, promptNote, fileInput, specObj, dataFile, btn, resultEl);
+    await submitCreate(title, ownerName, promptNote, groupName, fileInput, specObj, dataFile, btn, resultEl);
   }
 };
 
-async function submitCreate(title, ownerName, promptNote, fileInput, specObj, dataFile, btn, resultEl) {
+function showUploadSuccess(resultEl, viewUrl, labelText) {
+  const fullUrl = window.location.origin + viewUrl;
+  resultEl.className = 'success';
+  resultEl.innerHTML = '';
+  const label = document.createElement('div');
+  label.textContent = labelText;
+  const row = document.createElement('div');
+  row.className = 'view-url-row';
+  const urlInput = document.createElement('input');
+  urlInput.type = 'text'; urlInput.readOnly = true; urlInput.value = fullUrl;
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'secondary-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.onclick = () => { urlInput.select(); navigator.clipboard?.writeText(fullUrl); };
+  row.appendChild(urlInput); row.appendChild(copyBtn);
+  resultEl.appendChild(label);
+  resultEl.appendChild(row);
+}
+
+async function submitGenerate(title, ownerName, promptNote, groupName, spec, widgets, btn, resultEl) {
+  setButtonBusy(btn, 'Đang tạo...');
+  try {
+    const data = await apiFetch('/api/embeds/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        title, data_query_spec: spec, widgets,
+        owner_name: ownerName || null, prompt_note: promptNote || null, group_name: groupName || null,
+      }),
+    });
+    showUploadSuccess(resultEl, data.view_url, '✅ Đã tạo dashboard! Link nhúng vào Lark:');
+
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-owner-name').value = '';
+    document.getElementById('f-prompt-note').value = '';
+    resetLiveDataFields();
+
+    // Cập nhật lạc quan, cùng lý do với submitCreate() bên dưới (độ trễ streaming insert).
+    cachedEmbeds = [{
+      embed_id: data.embed_id, title, created_by: devUser, owner_name: ownerName, prompt_note: promptNote,
+      event_at: new Date().toISOString(), data_query_spec: spec,
+    }, ...cachedEmbeds];
+    renderEmbeds(cachedEmbeds);
+  } catch (e) {
+    resultEl.className = 'error';
+    resultEl.textContent = 'Lỗi tạo dashboard: ' + e.message;
+  } finally {
+    clearButtonBusy(btn);
+  }
+}
+
+async function submitCreate(title, ownerName, promptNote, groupName, fileInput, specObj, dataFile, btn, resultEl) {
   const formData = new FormData();
   formData.append('title', title);
   formData.append('file', fileInput.files[0]);
   if (ownerName) formData.append('owner_name', ownerName);
   if (promptNote) formData.append('prompt_note', promptNote);
+  if (groupName) formData.append('group_name', groupName);
   if (specObj) formData.append('data_query_spec', JSON.stringify(specObj));
   if (dataFile) formData.append('data_file', dataFile);
 
@@ -901,28 +1586,14 @@ async function submitCreate(title, ownerName, promptNote, fileInput, specObj, da
       throw new Error(message);
     }
     const data = await res.json();
-    const fullUrl = window.location.origin + data.view_url;
-    resultEl.className = 'success';
-    resultEl.innerHTML = '';
-    const label = document.createElement('div');
-    label.textContent = '✅ Upload xong! Link nhúng vào Lark:';
-    const row = document.createElement('div');
-    row.className = 'view-url-row';
-    const urlInput = document.createElement('input');
-    urlInput.type = 'text'; urlInput.readOnly = true; urlInput.value = fullUrl;
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'secondary-btn';
-    copyBtn.textContent = 'Copy';
-    copyBtn.onclick = () => { urlInput.select(); navigator.clipboard?.writeText(fullUrl); };
-    row.appendChild(urlInput); row.appendChild(copyBtn);
-    resultEl.appendChild(label);
-    resultEl.appendChild(row);
+    showUploadSuccess(resultEl, data.view_url, '✅ Upload xong! Link nhúng vào Lark:');
 
     document.getElementById('f-title').value = '';
     document.getElementById('f-owner-name').value = '';
     document.getElementById('f-prompt-note').value = '';
     document.getElementById('f-file').value = '';
     resetLiveDataFields();
+    clearFilePreview();
 
     // Cập nhật lạc quan bằng chính dữ liệu vừa gửi lên — KHÔNG gọi loadEmbeds() ngay
     // vì BigQuery streaming insert cần vài giây mới SELECT lại thấy, gọi ngay dễ
@@ -941,11 +1612,11 @@ async function submitCreate(title, ownerName, promptNote, fileInput, specObj, da
   }
 }
 
-async function saveEdit(embedId, title, ownerName, promptNote, specObj, dataFile, btn, resultEl) {
+async function saveEdit(embedId, title, ownerName, promptNote, groupName, specObj, dataFile, btn, resultEl) {
   setButtonBusy(btn, 'Đang lưu...');
   try {
     const updated = await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}`, {
-      method: 'POST', body: JSON.stringify({title, data_query_spec: specObj, owner_name: ownerName, prompt_note: promptNote}),
+      method: 'POST', body: JSON.stringify({title, data_query_spec: specObj, owner_name: ownerName, prompt_note: promptNote, group_name: groupName}),
     });
     let dataFileName = cachedEmbeds.find(e => e.embed_id === embedId)?.data_file_name || null;
     if (dataFile) {
@@ -961,17 +1632,25 @@ async function saveEdit(embedId, title, ownerName, promptNote, specObj, dataFile
         try { const parsed = JSON.parse(text); if (parsed && typeof parsed.detail === 'string') message = parsed.detail; } catch (e) {}
         throw new Error('Lưu tên/spec thành công nhưng lỗi upload file dữ liệu: ' + message);
       }
-      dataFileName = (await res.json()).data_file_name;
+      const fileResult = await res.json();
+      dataFileName = fileResult.data_file_name;
+      var columnWarning = fileResult.column_warning || null;
     }
     cachedEmbeds = cachedEmbeds.map(e => e.embed_id === embedId
       ? {...e, title: updated.title, data_query_spec: updated.data_query_spec,
-         owner_name: ownerName, prompt_note: promptNote,
+         owner_name: ownerName, prompt_note: promptNote, group_name: groupName || null,
          data_file_name: dataFileName, data_file_gcs_path: dataFileName ? (e.data_file_gcs_path || 'pending') : null}
       : e);
     exitEditMode();
     renderEmbeds(cachedEmbeds);
     resultEl.className = 'success';
     resultEl.textContent = '✅ Đã lưu thay đổi.';
+    if (columnWarning) {
+      const warn = document.createElement('div');
+      warn.className = 'warn-note';
+      warn.textContent = '⚠ ' + columnWarning; // untrusted content -> textContent
+      resultEl.appendChild(warn);
+    }
   } catch (e) {
     resultEl.className = 'error';
     resultEl.textContent = 'Lỗi lưu: ' + e.message;
@@ -988,6 +1667,7 @@ async function saveEdit(embedId, title, ownerName, promptNote, specObj, dataFile
       devUser = me.user;
       renderAccount(me);
       document.getElementById('admin-tab').hidden = !me.is_admin;
+      document.getElementById('show-all-wrapper').hidden = !me.is_admin;
       if (!me.can_upload_embed) {
         document.querySelector('.page-content').innerHTML = '<p class="empty-state">Bạn chưa được cấp quyền upload dashboard. '
           + '<a href="/">← Quay lại Tư vấn chọn bảng</a></p>'

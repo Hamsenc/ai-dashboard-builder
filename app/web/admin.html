@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quản trị — Data Explorer</title>
+<title>LSR Data Explorer</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
 <link rel="stylesheet" href="/theme.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,7 +19,10 @@
     width: 208px; flex-shrink: 0; background: var(--surface-2); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; padding: 20px 12px; gap: 2px; overflow-y: auto;
   }
-  .sidebar-title { font-size: 13.5px; font-weight: 700; padding: 0 10px 18px; color: var(--ink-primary); }
+  .sidebar-title { padding: 0 10px 18px; }
+  .sidebar-logo { display: block; width: 100%; height: auto; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sidebar-logo { filter: invert(1); } }
+  :root[data-theme="dark"] .sidebar-logo { filter: invert(1); }
   .sidebar-link {
     display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
     font-size: 13px; font-weight: 600; color: var(--ink-secondary); text-decoration: none;
@@ -108,9 +112,10 @@
 <body>
 
 <nav class="sidebar">
-  <div class="sidebar-title">🗂️ Data Explorer</div>
+  <div class="sidebar-title"><img src="/logo.png" class="sidebar-logo" alt="Lamson Retail Group"></div>
+  <a href="/guide.html" class="sidebar-link">📘 Hướng dẫn</a>
   <a href="/" class="sidebar-link">🗂️ Tư vấn chọn bảng</a>
-  <a href="/embeds.html" class="sidebar-link" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
+  <a href="/embeds.html" class="sidebar-link" id="embeds-tab">📊 Nhúng dashboard vào Lark</a>
   <a href="/admin.html" class="sidebar-link active">🛠️ Quản trị</a>
 </nav>
 
@@ -187,6 +192,25 @@
 </div>
 
 <div class="card">
+  <h2>Bảng dữ liệu được dùng nhiều nhất</h2>
+  <p class="sub">30 ngày gần nhất, tính theo lượt xem chi tiết/preview ở Tư vấn chọn bảng.</p>
+  <p class="sub" style="margin-bottom:8px;"><strong>Theo bảng</strong></p>
+  <div class="scroll-table" style="margin-bottom:18px;">
+    <table class="data-table" id="usage-tables-table">
+      <thead><tr><th>Bảng</th><th>Lượt xem</th><th>Số user</th><th>Xem gần nhất</th></tr></thead>
+      <tbody id="usage-tables-body"><tr><td colspan="4" class="empty-state">Đang tải...</td></tr></tbody>
+    </table>
+  </div>
+  <p class="sub" style="margin-bottom:8px;"><strong>Theo người dùng</strong></p>
+  <div class="scroll-table">
+    <table class="data-table" id="usage-users-table">
+      <thead><tr><th>Email</th><th>Lượt xem</th><th>Số bảng</th><th>Xem gần nhất</th></tr></thead>
+      <tbody id="usage-users-body"><tr><td colspan="4" class="empty-state">Đang tải...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
   <h2>Lịch sử đăng nhập</h2>
   <p class="sub">300 lượt đăng nhập gần nhất qua Lark OAuth.</p>
   <div class="scroll-table">
@@ -246,6 +270,32 @@ async function api(path, opts) {
 }
 
 function td(text) { const el = document.createElement('td'); el.textContent = text ?? '—'; return el; }
+
+async function loadTableUsage() {
+  const tablesBody = document.getElementById('usage-tables-body');
+  const usersBody = document.getElementById('usage-users-body');
+  try {
+    const {tables, users} = await api('/api/admin/table-usage');
+    tablesBody.innerHTML = '';
+    if (!tables.length) { tablesBody.innerHTML = '<tr><td colspan="4" class="empty-state">Chưa có lượt xem nào.</td></tr>'; }
+    for (const t of tables) {
+      const tr = document.createElement('tr');
+      tr.append(td(t.table_id), td(t.access_count), td(t.user_count), td(fmtTime(t.last_accessed_at)));
+      tablesBody.appendChild(tr);
+    }
+    usersBody.innerHTML = '';
+    if (!users.length) { usersBody.innerHTML = '<tr><td colspan="4" class="empty-state">Chưa có lượt xem nào.</td></tr>'; }
+    for (const u of users) {
+      const tr = document.createElement('tr');
+      tr.append(td(u.created_by), td(u.access_count), td(u.table_count), td(fmtTime(u.last_accessed_at)));
+      usersBody.appendChild(tr);
+    }
+  } catch (e) {
+    const msg = `<tr><td colspan="4" class="empty-state">Lỗi tải: ${e.message}</td></tr>`;
+    tablesBody.innerHTML = msg;
+    usersBody.innerHTML = msg;
+  }
+}
 
 async function loadLogins() {
   const body = document.getElementById('logins-body');
@@ -423,7 +473,6 @@ document.getElementById('revoke-btn').onclick = () => submitRole('revoke');
       const me = await res.json();
       devUser = me.user;
       renderAccount(me);
-      document.getElementById('embeds-tab').hidden = !me.can_upload_embed;
       if (!me.is_admin) {
         document.querySelector('.page-content').innerHTML = '<p class="empty-state">Bạn không có quyền admin. '
           + '<a href="/">← Quay lại Tư vấn chọn bảng</a></p>';
@@ -436,6 +485,7 @@ document.getElementById('revoke-btn').onclick = () => submitRole('revoke');
       await loadEmbedEvents();
       loadRoles();
       loadLogins();
+      loadTableUsage();
       return;
     }
   } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }

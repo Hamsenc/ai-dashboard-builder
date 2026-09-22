@@ -34,6 +34,80 @@ router = APIRouter(prefix="/d")
 
 _BASE_TAG_RE = re.compile(r"<base\s", re.IGNORECASE)
 _HEAD_RE = re.compile(r"(<head[^>]*>)", re.IGNORECASE)
+_BODY_CLOSE_RE = re.compile(r"</body>", re.IGNORECASE)
+
+
+def _toolbar_html(embed_id: str, embed: dict[str, Any]) -> str:
+    """Toolbar cố định góc trên-phải, chèn vào MỌI dashboard tự động theo nguồn dữ
+    liệu — không cần tác giả HTML tự code nút này. 'Làm mới' bypass cache 5 phút
+    của /d/{id}/data (xem invalidate_cache) bằng cách reload trang với ?refresh=1.
+    'Upload Excel' gọi thẳng /api/embeds/{id}/data-file có sẵn — cookie session tự
+    gửi kèm nếu trình duyệt đang đăng nhập (path cookie=/api, xem auth/session.py);
+    không đăng nhập/không có quyền sửa thì nhận 401/403 y hệt gọi API trực tiếp,
+    không mở thêm lỗ hổng nào so với trước (embed_id vẫn phải biết để gọi được)."""
+    buttons = []
+    if embed.get("data_query_spec"):
+        buttons.append('<button type="button" id="__ldbRefresh">↻ Làm mới</button>')
+    if embed.get("data_file_gcs_path"):
+        buttons.append(
+            '<button type="button" id="__ldbUpload">⬆ Upload Excel</button>'
+            '<input type="file" id="__ldbUploadInput" accept=".xlsx,.xls,.csv" hidden>'
+        )
+    if not buttons:
+        return ""
+    return f"""
+<div id="__ldbToolbar" style="position:fixed;top:14px;right:16px;z-index:2147483647;display:flex;gap:8px;font-family:sans-serif;">
+{''.join(buttons)}
+</div>
+<style>
+#__ldbToolbar button {{ border:none;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:700;
+  background:#ede9fe;color:#7c3aed;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12); }}
+#__ldbToolbar button:hover {{ opacity:.85; }}
+#__ldbToolbar button:disabled {{ opacity:.6;cursor:default; }}
+</style>
+<script>
+(function() {{
+  var refreshBtn = document.getElementById('__ldbRefresh');
+  if (refreshBtn) refreshBtn.onclick = function() {{ location.href = location.pathname + '?refresh=1'; }};
+  var uploadBtn = document.getElementById('__ldbUpload');
+  var uploadInput = document.getElementById('__ldbUploadInput');
+  if (uploadBtn) uploadBtn.onclick = function() {{ uploadInput.click(); }};
+  if (uploadInput) uploadInput.onchange = function() {{
+    var file = uploadInput.files[0];
+    if (!file) return;
+    var original = uploadBtn.textContent;
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Đang tải lên...';
+    var fd = new FormData();
+    fd.append('data_file', file);
+    fetch('/api/embeds/{embed_id}/data-file', {{ method: 'POST', body: fd }}).then(function(r) {{
+      if (r.status === 401) throw new Error('Cần đăng nhập app trước (mở /auth/lark/login).');
+      if (r.status === 403) throw new Error('Bạn không có quyền sửa dashboard này.');
+      if (!r.ok) return r.json().catch(function() {{ return {{}}; }}).then(function(b) {{ throw new Error(b.detail || ('HTTP ' + r.status)); }});
+      return r.json();
+    }}).then(function(result) {{
+      if (result && result.column_warning) alert('⚠ ' + result.column_warning);
+      location.href = location.pathname + '?refresh=1';
+    }}).catch(function(err) {{
+      alert('Lỗi upload: ' + err.message);
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = original;
+    }});
+  }};
+}})();
+</script>
+"""
+
+
+def _inject_toolbar(html: str, embed_id: str, embed: dict[str, Any]) -> str:
+    toolbar = _toolbar_html(embed_id, embed)
+    if not toolbar:
+        return html
+    match = _BODY_CLOSE_RE.search(html)
+    if match:
+        idx = match.start()
+        return html[:idx] + toolbar + html[idx:]
+    return html + toolbar
 
 
 def _inject_base_tag(html: str, embed_id: str) -> str:
@@ -71,16 +145,19 @@ def _serialize_value(v: Any) -> Any:
 
 
 @router.get("/{embed_id}")
-def view_embed(embed_id: str):
+def view_embed(embed_id: str, refresh: bool = False):
     client = get_bq_client()
     embed = embeds_store.get_current_embed(client, embed_id)
     if embed is None:
         raise HTTPException(404, "Không tìm thấy dashboard này.")
     if embed["event"] == "revoked":
         raise HTTPException(410, "Dashboard này đã bị thu hồi.")
+    if refresh:
+        invalidate_cache(embed_id)
 
     html = download_html(embed["gcs_path"])
     html = _inject_base_tag(html, embed_id)
+    html = _inject_toolbar(html, embed_id, embed)
     return HTMLResponse(html)
 
 

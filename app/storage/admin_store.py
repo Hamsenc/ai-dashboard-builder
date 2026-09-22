@@ -99,3 +99,28 @@ def list_pending_role_requests(client: bigquery.Client) -> list[dict[str, Any]]:
     sql = f"SELECT * FROM `{_table('v_current_user_roles')}` WHERE event = 'requested' ORDER BY event_at"
     rows = list(client.query(sql).result())
     return [dict(r.items()) for r in rows]
+
+
+def list_table_usage_summary(client: bigquery.Client, days: int = 30) -> dict[str, list[dict[str, Any]]]:
+    """Top bảng được xem/preview nhiều nhất + top user active nhất trong N ngày gần
+    nhất, đọc từ data_access_log (ghi bởi bq_store.insert_data_access() mỗi lần ai
+    xem chi tiết/preview 1 bảng ở Tư vấn chọn bảng — xem app/api/catalog.py). Đặt ở
+    đây thay vì bq_store.py vì module đó cam kết insert-only/không đọc."""
+    job_config = bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter("days", "INT64", days)])
+    tables_sql = (
+        "SELECT table_id, COUNT(*) AS access_count, COUNT(DISTINCT created_by) AS user_count, "
+        "MAX(created_at) AS last_accessed_at "
+        f"FROM `{_table('data_access_log')}` "
+        "WHERE created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @days DAY) "
+        "GROUP BY table_id ORDER BY access_count DESC LIMIT 50"
+    )
+    users_sql = (
+        "SELECT created_by, COUNT(*) AS access_count, COUNT(DISTINCT table_id) AS table_count, "
+        "MAX(created_at) AS last_accessed_at "
+        f"FROM `{_table('data_access_log')}` "
+        "WHERE created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @days DAY) "
+        "GROUP BY created_by ORDER BY access_count DESC LIMIT 50"
+    )
+    tables = [dict(r.items()) for r in client.query(tables_sql, job_config=job_config).result()]
+    users = [dict(r.items()) for r in client.query(users_sql, job_config=job_config).result()]
+    return {"tables": tables, "users": users}

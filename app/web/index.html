@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Data Explorer</title>
+<title>LSR Data Explorer</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
 <link rel="stylesheet" href="/theme.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,7 +18,10 @@
     width: 208px; flex-shrink: 0; background: var(--surface-2); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; padding: 20px 12px; gap: 2px; overflow-y: auto;
   }
-  .sidebar-title { font-size: 13.5px; font-weight: 700; padding: 0 10px 18px; color: var(--ink-primary); }
+  .sidebar-title { padding: 0 10px 18px; }
+  .sidebar-logo { display: block; width: 100%; height: auto; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sidebar-logo { filter: invert(1); } }
+  :root[data-theme="dark"] .sidebar-logo { filter: invert(1); }
   .sidebar-link {
     display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
     font-size: 13px; font-weight: 600; color: var(--ink-secondary); text-decoration: none;
@@ -209,14 +213,58 @@
   }
   .table-row-why { font-size: 12px; color: var(--series-1); margin-top: 4px; }
   .table-row-caveat { font-size: 11.5px; color: var(--warning-ink); margin-top: 3px; }
+
+  /* ---------- Advisor: bold + đẩy lên đầu (KHÔNG còn ẩn bảng không khớp) ---------- */
+  .table-row-checkbox { flex-shrink: 0; width: 17px; height: 17px; accent-color: var(--series-1); cursor: pointer; }
+  .table-row.recommended {
+    border-color: var(--series-1); background: var(--series-1-wash);
+  }
+  .table-row.recommended .table-row-name { font-weight: 750; }
+  .recommended-section-title {
+    font-size: 12px; font-weight: 700; color: var(--series-1); margin: 0 0 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .others-section-title {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--ink-muted); margin: 22px 0 12px; padding-top: 14px; border-top: 1px solid var(--border);
+  }
+
+  /* ---------- Khay "Bảng đang chọn" ---------- */
+  #selection-tray {
+    position: sticky; bottom: 0; margin-top: 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,.08);
+  }
+  #selection-tray-title { font-size: 12.5px; font-weight: 700; margin-bottom: 10px; }
+  #selection-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .selection-chip {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2);
+    border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 12.5px;
+    font-family: 'DM Mono', ui-monospace, monospace;
+  }
+  .selection-chip button {
+    border: none; background: transparent; color: var(--ink-muted); cursor: pointer;
+    font-size: 14px; line-height: 1; width: 20px; height: 20px; border-radius: 50%;
+  }
+  .selection-chip button:hover { background: var(--border); color: var(--ink-primary); }
+  #selection-tray-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+  #selection-tray-hint { font-size: 11px; font-style: italic; color: var(--ink-muted); margin-right: auto; }
+  .tray-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-primary);
+    border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .tray-btn:hover { background: var(--surface-2); }
+  .tray-btn.primary { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+  .tray-btn.primary:hover { opacity: 0.9; }
 </style>
 </head>
 <body>
 
 <nav class="sidebar">
-  <div class="sidebar-title">🗂️ Data Explorer</div>
+  <div class="sidebar-title"><img src="/logo.png" class="sidebar-logo" alt="Lamson Retail Group"></div>
+  <a href="/guide.html" class="sidebar-link">📘 Hướng dẫn</a>
   <a href="/" class="sidebar-link active">🗂️ Tư vấn chọn bảng</a>
-  <a href="/embeds.html" class="sidebar-link" id="embeds-tab" hidden>📊 Nhúng dashboard vào Lark</a>
+  <a href="/embeds.html" class="sidebar-link" id="embeds-tab">📊 Nhúng dashboard vào Lark</a>
   <a href="/admin.html" class="sidebar-link" id="admin-tab" hidden>🛠️ Quản trị</a>
 </nav>
 
@@ -244,13 +292,23 @@
   <div id="list-view">
     <div id="explorer-header">
       <h2 id="explorer-title">Bảng dữ liệu Serving</h2>
-      <button id="cancel-filter-btn" hidden>✕ Hủy lọc, xem tất cả bảng</button>
+      <button id="cancel-filter-btn" hidden>✕ Bỏ gợi ý</button>
     </div>
     <p id="filter-reason" hidden></p>
     <div id="search-row">
       <input id="search-input" placeholder="Tìm theo tên bảng hoặc mô tả..." />
     </div>
     <div id="table-groups"><p class="empty-state">Đang tải danh sách bảng...</p></div>
+
+    <div id="selection-tray" hidden>
+      <div id="selection-tray-title">Bảng đang chọn</div>
+      <div id="selection-chip-row"></div>
+      <div id="selection-tray-actions">
+        <span id="selection-tray-hint">Preview chỉ lấy 50 dòng/bảng để tham khảo cấu trúc.</span>
+        <button type="button" class="tray-btn" id="copy-prompt-btn">📋 Copy prompt</button>
+        <button type="button" class="tray-btn primary" id="export-selection-btn">📄 Tải data preview kèm mô tả</button>
+      </div>
+    </div>
   </div>
 
   <div id="detail-view" hidden>
@@ -309,7 +367,6 @@ async function initIdentity() {
       input.disabled = false;
       input.placeholder = 'Mô tả báo cáo bạn muốn làm...';
       document.getElementById('send-btn').disabled = false;
-      document.getElementById('embeds-tab').hidden = !me.can_upload_embed;
       document.getElementById('admin-tab').hidden = !me.is_admin;
       return;
     }
@@ -511,7 +568,11 @@ const DATASET_LABELS = {
 };
 
 let allTables = [];
-let filteredTables = null; // null = không lọc, đang xem toàn bộ bảng
+// table_id -> {why, caveats, rank} — bảng advisor gợi ý cho câu hỏi gần nhất. KHÔNG còn ẩn
+// bảng không khớp như trước (user phản hồi "ẩn hẳn" gây khó dùng khi advisor đoán trật) —
+// giờ chỉ bold + đẩy lên đầu, các bảng còn lại vẫn hiện đầy đủ bên dưới.
+let recommendedById = {};
+let selectedTableIds = new Set(); // các table_id user tự tích chọn, độc lập với gợi ý advisor
 const listViewEl = document.getElementById('list-view');
 const detailViewEl = document.getElementById('detail-view');
 const tableGroupsEl = document.getElementById('table-groups');
@@ -524,7 +585,7 @@ async function loadTables() {
   try {
     const resp = await apiFetch('/api/tables');
     allTables = resp.tables;
-    renderTableGroups(allTables);
+    renderCurrentSet();
   } catch (e) {
     showEmptyState(tableGroupsEl, 'Lỗi tải danh sách bảng: ' + e.message);
   }
@@ -541,13 +602,60 @@ function fmtSize(bytes) {
   return (mb / 1024).toFixed(2) + ' GB';
 }
 
-function renderTableGroups(tables) {
-  if (tables.length === 0) {
-    showEmptyState(tableGroupsEl, 'Không tìm thấy bảng nào khớp.');
-    return;
-  }
-  tableGroupsEl.innerHTML = '';
+function buildTableRow(t) {
+  const rec = recommendedById[t.table_id];
+  const row = document.createElement('div');
+  row.className = 'table-row' + (rec ? ' recommended' : '');
 
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'table-row-checkbox';
+  checkbox.checked = selectedTableIds.has(t.table_id);
+  checkbox.title = 'Chọn bảng này để tải kèm data preview';
+  checkbox.onclick = (e) => { e.stopPropagation(); toggleTableSelection(t); };
+  row.appendChild(checkbox);
+
+  row.onclick = () => openTableDetail(t.table_id);
+
+  const main = document.createElement('div');
+  main.className = 'table-row-main';
+  const nameLine = document.createElement('div');
+  nameLine.className = 'table-row-name';
+  nameLine.textContent = t.table_name;
+  if (t.has_pii) {
+    const badge = document.createElement('span');
+    badge.className = 'pii-badge';
+    badge.textContent = 'CÓ DỮ LIỆU NHẠY CẢM';
+    nameLine.appendChild(badge);
+  }
+  main.appendChild(nameLine);
+  const desc = document.createElement('div');
+  desc.className = 'table-row-desc';
+  desc.textContent = t.purpose || t.description || '(chưa có mô tả)';
+  main.appendChild(desc);
+  if (rec && rec.why) {
+    const why = document.createElement('div');
+    why.className = 'table-row-why';
+    why.textContent = rec.why;
+    main.appendChild(why);
+  }
+  if (rec && rec.caveats) {
+    const caveat = document.createElement('div');
+    caveat.className = 'table-row-caveat';
+    caveat.textContent = '⚠️ ' + rec.caveats;
+    main.appendChild(caveat);
+  }
+  row.appendChild(main);
+
+  const stats = document.createElement('div');
+  stats.className = 'table-row-stats';
+  stats.textContent = fmtRowCount(t.row_count);
+  row.appendChild(stats);
+
+  return row;
+}
+
+function renderTableGroups(tables) {
   const byDataset = {};
   tables.forEach(t => { (byDataset[t.dataset] = byDataset[t.dataset] || []).push(t); });
 
@@ -560,93 +668,71 @@ function renderTableGroups(tables) {
 
     const list = document.createElement('div');
     list.className = 'table-list';
-    byDataset[dataset].forEach(t => {
-      const row = document.createElement('div');
-      row.className = 'table-row';
-      row.onclick = () => openTableDetail(t.table_id);
-
-      const main = document.createElement('div');
-      main.className = 'table-row-main';
-      const nameLine = document.createElement('div');
-      nameLine.className = 'table-row-name';
-      nameLine.textContent = t.table_name;
-      if (t.has_pii) {
-        const badge = document.createElement('span');
-        badge.className = 'pii-badge';
-        badge.textContent = 'CÓ DỮ LIỆU NHẠY CẢM';
-        nameLine.appendChild(badge);
-      }
-      main.appendChild(nameLine);
-      const desc = document.createElement('div');
-      desc.className = 'table-row-desc';
-      desc.textContent = t.purpose || t.description || '(chưa có mô tả)';
-      main.appendChild(desc);
-      if (t._advisorWhy) {
-        const why = document.createElement('div');
-        why.className = 'table-row-why';
-        why.textContent = t._advisorWhy;
-        main.appendChild(why);
-      }
-      if (t._advisorCaveats) {
-        const caveat = document.createElement('div');
-        caveat.className = 'table-row-caveat';
-        caveat.textContent = '⚠️ ' + t._advisorCaveats;
-        main.appendChild(caveat);
-      }
-      row.appendChild(main);
-
-      const stats = document.createElement('div');
-      stats.className = 'table-row-stats';
-      stats.textContent = fmtRowCount(t.row_count);
-      row.appendChild(stats);
-
-      list.appendChild(row);
-    });
+    byDataset[dataset].forEach(t => list.appendChild(buildTableRow(t)));
     group.appendChild(list);
     tableGroupsEl.appendChild(group);
   });
 }
 
-function currentBaseTables() {
-  return filteredTables !== null ? filteredTables : allTables;
-}
-
 function renderCurrentSet() {
   const q = document.getElementById('search-input').value.trim().toLowerCase();
-  const base = currentBaseTables();
-  if (!q) { renderTableGroups(base); return; }
-  renderTableGroups(base.filter(t =>
-    t.table_name.toLowerCase().includes(q)
-    || (t.purpose || '').toLowerCase().includes(q)
-    || (t.description || '').toLowerCase().includes(q)
-  ));
+  const matches = (t) => !q || t.table_name.toLowerCase().includes(q)
+    || (t.purpose || '').toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q);
+  const base = allTables.filter(matches);
+
+  tableGroupsEl.innerHTML = '';
+  if (base.length === 0) {
+    showEmptyState(tableGroupsEl, 'Không tìm thấy bảng nào khớp.');
+    return;
+  }
+
+  const recommendedIds = Object.keys(recommendedById).sort((a, b) => recommendedById[a].rank - recommendedById[b].rank);
+  const byId = {};
+  base.forEach(t => { byId[t.table_id] = t; });
+  const recommendedTables = recommendedIds.map(id => byId[id]).filter(Boolean);
+  const otherTables = base.filter(t => !recommendedById[t.table_id]);
+
+  if (recommendedTables.length > 0) {
+    const title = document.createElement('div');
+    title.className = 'recommended-section-title';
+    title.textContent = `✨ Phù hợp với yêu cầu của bạn (${recommendedTables.length})`;
+    tableGroupsEl.appendChild(title);
+    const list = document.createElement('div');
+    list.className = 'table-list';
+    recommendedTables.forEach(t => list.appendChild(buildTableRow(t)));
+    tableGroupsEl.appendChild(list);
+
+    if (otherTables.length > 0) {
+      const othersTitle = document.createElement('div');
+      othersTitle.className = 'others-section-title';
+      othersTitle.textContent = 'Bảng khác';
+      tableGroupsEl.appendChild(othersTitle);
+    }
+  }
+  renderTableGroups(otherTables);
 }
 
 document.getElementById('search-input').addEventListener('input', renderCurrentSet);
 
-/* ---------- Lọc danh sách bảng theo gợi ý của Advisor ---------- */
+/* ---------- Advisor: bold + đẩy bảng phù hợp lên đầu (không ẩn bảng còn lại) ---------- */
 function applyAdvisorFilter(resp) {
   document.getElementById('search-input').value = ''; // tránh kết hợp với tìm kiếm cũ gây khó hiểu
 
   if (resp.action === 'recommend') {
-    const byId = {};
-    allTables.forEach(t => { byId[t.table_id] = t; });
-    filteredTables = resp.recommendations
-      .map(rec => {
-        const base = byId[rec.table_id];
-        return base ? Object.assign({}, base, {_advisorWhy: rec.why, _advisorCaveats: rec.caveats}) : null;
-      })
-      .filter(Boolean);
-    explorerTitleEl.textContent = `Bảng phù hợp (${filteredTables.length})`;
+    recommendedById = {};
+    resp.recommendations.forEach((rec, i) => {
+      recommendedById[rec.table_id] = { why: rec.why, caveats: rec.caveats, rank: i };
+    });
+    explorerTitleEl.textContent = `Bảng dữ liệu Serving — ${resp.recommendations.length} bảng phù hợp`;
     filterReasonEl.textContent = resp.message_to_user;
     filterReasonEl.hidden = false;
   } else if (resp.action === 'not_available') {
-    filteredTables = [];
-    explorerTitleEl.textContent = 'Bảng phù hợp (0)';
+    recommendedById = {};
+    explorerTitleEl.textContent = 'Bảng dữ liệu Serving';
     filterReasonEl.textContent = resp.missing_data || resp.message_to_user;
     filterReasonEl.hidden = false;
   } else {
-    return; // clarify: chưa đủ thông tin để lọc, giữ nguyên danh sách đang hiện
+    return; // clarify: chưa đủ thông tin để gợi ý, giữ nguyên danh sách đang hiện
   }
 
   cancelFilterBtnEl.hidden = false;
@@ -654,13 +740,201 @@ function applyAdvisorFilter(resp) {
 }
 
 function clearAdvisorFilter() {
-  filteredTables = null;
+  recommendedById = {};
   cancelFilterBtnEl.hidden = true;
   filterReasonEl.hidden = true;
   explorerTitleEl.textContent = 'Bảng dữ liệu Serving';
   renderCurrentSet();
 }
 cancelFilterBtnEl.onclick = clearAdvisorFilter;
+
+/* ============================== Khay "Bảng đang chọn" + xuất file cho AI ============================== */
+
+const selectionTrayEl = document.getElementById('selection-tray');
+const selectionChipRowEl = document.getElementById('selection-chip-row');
+
+function toggleTableSelection(t) {
+  if (selectedTableIds.has(t.table_id)) selectedTableIds.delete(t.table_id);
+  else selectedTableIds.add(t.table_id);
+  renderSelectionTray();
+}
+
+function removeFromSelection(tableId) {
+  selectedTableIds.delete(tableId);
+  renderSelectionTray();
+  renderCurrentSet(); // bỏ tick lại checkbox tương ứng trong danh sách
+}
+
+function renderSelectionTray() {
+  selectionTrayEl.hidden = selectedTableIds.size === 0;
+  selectionChipRowEl.innerHTML = '';
+  Array.from(selectedTableIds).forEach(tableId => {
+    const t = allTables.find(x => x.table_id === tableId);
+    const chip = document.createElement('span');
+    chip.className = 'selection-chip';
+    const label = document.createElement('span');
+    label.textContent = t ? t.table_name : tableId;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Bỏ chọn';
+    removeBtn.onclick = () => removeFromSelection(tableId);
+    chip.appendChild(label);
+    chip.appendChild(removeBtn);
+    selectionChipRowEl.appendChild(chip);
+  });
+}
+
+const DATA_QUERY_SPEC_CONTRACT = `--- Cấu trúc data_query_spec.json (BẮT BUỘC theo đúng, server validate chặt — sai cấu trúc sẽ bị từ chối lúc upload) ---
+{
+  "table_id": "<đúng y hệt table_id ghi ở mỗi bảng bên trên>",
+  "columns": ["<cột dùng để nhóm/group by — để mảng rỗng [] nếu không cần nhóm>"],
+  "aggregations": [
+    {"column": "<tên cột số thật>", "fn": "SUM|COUNT|AVG|MIN|MAX", "alias": "<tên_kết_quả>"}
+  ],
+  "filters": [
+    {"column": "<tên cột thật>", "op": "eq|ne|gt|gte|lt|lte", "value": <giá trị>, "type": "STRING|INT64|FLOAT64|BOOL|DATE|TIMESTAMP"}
+  ],
+  "order_by": [{"column": "<tên cột hoặc alias>", "direction": "asc|desc"}],
+  "limit": 500
+}
+Quy tắc bắt buộc:
+- table_id / columns / aggregations[].column / filters[].column: PHẢI là tên cột THẬT lấy đúng từ schema bên trên — không suy đoán, không tự đặt tên khác, không dịch sang tiếng Anh/Việt.
+- aggregations[].fn chỉ nhận đúng 1 trong: SUM, COUNT, AVG, MIN, MAX. alias chỉ gồm chữ/số/gạch dưới, không bắt đầu bằng số, không trùng tên cột hay alias khác trong cùng spec.
+- filters[].op chỉ nhận: eq, ne, gt, gte, lt, lte. filters[].type phải khớp đúng kiểu dữ liệu thật của cột đó (xem cột "Kiểu" trong schema).
+- order_by[].column phải là 1 tên nằm trong "columns" hoặc là 1 alias trong "aggregations" — không sort được theo cột chưa chọn.
+- Có cả columns và aggregations -> tự động GROUP BY theo columns. Chỉ có aggregations (columns rỗng) -> trả về đúng 1 dòng tổng hợp toàn bảng.
+- KHÔNG hỗ trợ JOIN/subquery/SQL tự do — mỗi spec chỉ 1 bảng, 1 tầng aggregation.
+- limit: số nguyên dương, tối đa 10000, mặc định 500 nếu bỏ trống.
+
+--- Nếu cần dùng NHIỀU BẢNG trong 1 dashboard (tối đa 3 bảng) ---
+Bọc các spec đơn ở trên vào 1 object "specs", mỗi key là 1 tên bạn tự đặt (chỉ chữ/số/gạch dưới, không bắt đầu bằng số — đây cũng là key mà fetch('data') sẽ trả về):
+{
+  "specs": {
+    "ten_ban_tu_dat_1": { ...1 spec đơn như cấu trúc trên... },
+    "ten_ban_tu_dat_2": { ...1 spec đơn như cấu trúc trên... }
+  }
+}`;
+
+function buildAiExportText(tablesData) {
+  const parts = [];
+  parts.push('=== DỮ LIỆU MẪU CHO AI THIẾT KẾ DASHBOARD (Data Explorer — ai-dashboard-builder) ===\n');
+  parts.push(
+    'CẢNH BÁO QUAN TRỌNG — đọc trước khi làm gì khác:\n'
+    + 'Mỗi bảng dưới đây chỉ có tối đa 50 DÒNG MẪU để bạn xem cấu trúc/định dạng dữ liệu.\n'
+    + 'Bảng THẬT trong BigQuery có thể có hàng nghìn đến hàng triệu dòng, trải dài NHIỀU NĂM.\n'
+    + 'TUYỆT ĐỐI KHÔNG hardcode bất kỳ giá trị cụ thể nào thấy trong mẫu (tên brand, mã kênh,\n'
+    + 'ngày tháng, số lượng...) làm điều kiện lọc cứng trong dashboard.html hay trong\n'
+    + 'data_query_spec.json — số liệu thật đa dạng và nhiều hơn rất nhiều so với mẫu này.\n'
+    + '\n'
+    + 'Dashboard bạn tạo ra KHÔNG hiển thị trực tiếp 50 dòng mẫu này. Khi người xem mở trang,\n'
+    + "dashboard sẽ tự gọi fetch('data') để server truy vấn lại BigQuery THẬT theo đúng file\n"
+    + 'data_query_spec.json bạn viết, trả JSON dạng {"columns": [...], "rows": [...]} (hoặc\n'
+    + '{"tên_bảng": {"columns":..., "rows":...}, ...} nếu dùng nhiều bảng — xem contract bên dưới).\n'
+  );
+
+  tablesData.forEach(({ table, preview }, i) => {
+    parts.push(`\n${'='.repeat(70)}\nBẢNG ${i + 1}/${tablesData.length}: ${table.table_name}\n${'='.repeat(70)}`);
+    parts.push(`table_id: ${table.table_id}`);
+    parts.push(`Số dòng thật trong bảng: ${fmtRowCount(table.row_count)}`);
+    parts.push(`Mục đích / nội dung bảng: ${table.purpose || table.description || '(chưa có mô tả)'}`);
+    if (table.grain) parts.push(`Grain (1 dòng nghĩa là gì): ${table.grain}`);
+    if (table.has_pii) parts.push(`⚠️ Bảng có dữ liệu nhạy cảm: ${table.pii_note || ''}`);
+
+    parts.push('\nSchema cột (tên - kiểu - mô tả):');
+    (table.columns || []).forEach(c => {
+      let line = `- ${c.name} (${c.type})`;
+      if (c.friendly_name) line += ` — ${c.friendly_name}`;
+      if (c.description) line += `: ${c.description}`;
+      parts.push(line);
+      (c.sentinel_values || []).forEach(s => {
+        parts.push(`    ⚠️ Giá trị sentinel: ${s.value} = ${s.meaning} — KHÔNG tính vào tổng/trung bình, hiện riêng nếu cần.`);
+      });
+    });
+
+    if (preview && preview.rows && preview.rows.length) {
+      parts.push(`\n${preview.rows.length} dòng dữ liệu mẫu (CSV):`);
+      const cols = preview.columns;
+      const csvEscape = (v) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      parts.push(cols.join(','));
+      preview.rows.forEach(row => parts.push(cols.map(c => csvEscape(row[c])).join(',')));
+    } else {
+      parts.push('\n(Không lấy được dữ liệu mẫu — vẫn dùng đúng schema ở trên để viết dashboard.)');
+    }
+  });
+
+  parts.push(`\n\n${'='.repeat(70)}\nHƯỚNG DẪN CHO AI — YÊU CẦU ĐẦU RA\n${'='.repeat(70)}`);
+  parts.push(
+    'Trả về đúng 2 file:\n'
+    + '1. dashboard.html — file HTML đầy đủ (<!doctype html>...), tự vẽ KPI/biểu đồ/bảng,\n'
+    + "   gọi fetch('data') lúc trang load để lấy số liệu thật (dùng đường dẫn TƯƠNG ĐỐI\n"
+    + "   'data', không phải URL tuyệt đối — app tự chèn <base> đúng chỗ khi host).\n"
+    + '2. data_query_spec.json — JSON mô tả câu truy vấn sẽ chạy MỖI LẦN có người mở dashboard,\n'
+    + '   theo ĐÚNG cấu trúc bên dưới.\n'
+  );
+  parts.push(DATA_QUERY_SPEC_CONTRACT);
+  parts.push(
+    '\n--- Nộp bài / lấy link nhúng Lark ---\n'
+    + '1. Vào https://ai-dashboard-builder-2eodhfgo5a-as.a.run.app/embeds.html (đăng nhập Lark trước,\n'
+    + '   cần được cấp quyền upload — có nút "Yêu cầu cấp quyền" nếu chưa có).\n'
+    + '2. Chọn chế độ "📁 Upload file HTML có sẵn" → nhập tên dashboard → chọn file dashboard.html.\n'
+    + '3. Bật "Dữ liệu sống" → "🗄️ Bảng BigQuery" → "📝 Nhập JSON trực tiếp" → dán nguyên nội dung\n'
+    + '   file data_query_spec.json vào ô đó.\n'
+    + '4. Bấm Upload → nhận link /d/{id} → copy dán vào Lark.'
+  );
+
+  return parts.join('\n');
+}
+
+const COPY_PROMPT_TEXT =
+  'Tôi cần bạn thiết kế 1 dashboard HTML từ dữ liệu BigQuery trong file đính kèm (file .txt gồm '
+  + 'schema cột, số dòng thật, và 50 dòng dữ liệu mẫu của 1 hoặc nhiều bảng, kèm hướng dẫn chi tiết). '
+  + 'Đọc kỹ phần "HƯỚNG DẪN CHO AI" ở cuối file trước khi làm — đặc biệt phần cảnh báo không hardcode '
+  + 'giá trị mẫu và đúng cấu trúc data_query_spec.json. Trả về đúng 2 file: dashboard.html và data_query_spec.json.';
+
+document.getElementById('copy-prompt-btn').onclick = async () => {
+  const btn = document.getElementById('copy-prompt-btn');
+  try {
+    await navigator.clipboard.writeText(COPY_PROMPT_TEXT);
+    setButtonBusy(btn, '✅ Đã copy');
+    setTimeout(() => clearButtonBusy(btn), 1500);
+  } catch (e) {
+    alert('Không copy được, tự chọn đoạn text:\n\n' + COPY_PROMPT_TEXT);
+  }
+};
+
+document.getElementById('export-selection-btn').onclick = async () => {
+  const btn = document.getElementById('export-selection-btn');
+  setButtonBusy(btn, '⏳ Đang chuẩn bị...');
+  try {
+    const ids = Array.from(selectedTableIds);
+    const tablesData = await Promise.all(ids.map(async (id) => {
+      const [table, preview] = await Promise.all([
+        apiFetch(`/api/tables/${encodeURIComponent(id)}`),
+        apiFetch(`/api/tables/${encodeURIComponent(id)}/preview?limit=50`).catch(() => null),
+      ]);
+      return { table, preview };
+    }));
+    const text = buildAiExportText(tablesData);
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `data-cho-ai-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Lỗi chuẩn bị file: ' + e.message);
+  } finally {
+    clearButtonBusy(btn);
+  }
+};
 
 async function openTableDetail(tableId) {
   listViewEl.hidden = true;

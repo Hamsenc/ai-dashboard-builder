@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LSR Data Explorer</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="stylesheet" href="/theme.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; height: 100vh; overflow: hidden; }
+  .page-content { max-width: 820px; margin: 0 auto; padding: 28px 32px; }
+
+  /* ---------- Sidebar + top bar dùng chung 4 trang (index/embeds/admin/guide) ---------- */
+  .sidebar {
+    width: 208px; flex-shrink: 0; background: var(--surface-2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 12px; gap: 2px; overflow-y: auto;
+  }
+  .sidebar-title { padding: 0 10px 18px; }
+  .sidebar-logo { display: block; width: 100%; height: auto; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sidebar-logo { filter: invert(1); } }
+  :root[data-theme="dark"] .sidebar-logo { filter: invert(1); }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; color: var(--ink-secondary); text-decoration: none;
+  }
+  .sidebar-link:hover { background: var(--surface); color: var(--ink-primary); }
+  .sidebar-link.active { background: var(--surface); color: var(--series-1); }
+
+  .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; }
+  .topbar {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+    padding: 10px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  #theme-toggle-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-primary);
+    border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px;
+  }
+  .account-cluster { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-secondary); }
+  .account-avatar {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; flex-shrink: 0;
+  }
+  .account-cluster a { color: var(--series-1); font-weight: 600; text-decoration: none; }
+  .main-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+
+  h1 { font-size: 21px; font-weight: 650; margin: 0 0 6px; }
+  p.lead { font-size: 13.5px; color: var(--ink-secondary); margin: 4px 0 24px; line-height: 1.5; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 24px; margin-bottom: 22px;
+  }
+  .card h2 { font-size: 15px; font-weight: 650; margin: 0 0 10px; }
+  .card p { font-size: 13px; color: var(--ink-secondary); line-height: 1.6; margin: 0 0 10px; }
+  .card p:last-child { margin-bottom: 0; }
+  .card ol, .card ul { margin: 0 0 10px; padding-left: 20px; font-size: 13px; color: var(--ink-secondary); line-height: 1.7; }
+  .card code { font-family: 'DM Mono', ui-monospace, monospace; font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  .feature-row { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .feature-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .feature-row:first-child { padding-top: 0; }
+  .feature-icon { font-size: 22px; flex-shrink: 0; width: 30px; text-align: center; }
+  .feature-title { font-size: 13.5px; font-weight: 650; margin-bottom: 3px; }
+  .feature-desc { font-size: 12.5px; color: var(--ink-secondary); line-height: 1.5; }
+  .feature-desc a { color: var(--series-1); font-weight: 600; text-decoration: none; }
+
+  .skill-steps { counter-reset: step; list-style: none; padding-left: 0; }
+  .skill-steps li { counter-increment: step; position: relative; padding-left: 30px; margin-bottom: 14px; font-size: 13px; color: var(--ink-secondary); line-height: 1.55; }
+  .skill-steps li:last-child { margin-bottom: 0; }
+  .skill-steps li::before {
+    content: counter(step); position: absolute; left: 0; top: 0; width: 20px; height: 20px;
+    background: var(--series-1); color: #fff; border-radius: 50%; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .skill-steps strong { color: var(--ink-primary); }
+
+  .prompt-item { margin-bottom: 16px; }
+  .prompt-item:last-child { margin-bottom: 0; }
+  .prompt-item-title { font-size: 13px; font-weight: 650; margin-bottom: 6px; }
+  .prompt-box {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    font-family: 'DM Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.6; white-space: pre-wrap;
+    margin-bottom: 8px;
+  }
+  .copy-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-primary);
+    border-radius: 6px; padding: 4px 10px; font-size: 11.5px; cursor: pointer;
+  }
+  .copy-btn:hover { background: var(--surface-2); }
+
+  .skill-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .skill-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .skill-row:first-child { padding-top: 0; }
+  .skill-row-main { flex: 1; min-width: 0; }
+  .skill-row-name { font-size: 13.5px; font-weight: 650; font-family: 'DM Mono', ui-monospace, monospace; }
+  .skill-row-desc { font-size: 12.5px; color: var(--ink-secondary); margin-top: 3px; line-height: 1.5; }
+  .skill-row-path { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
+  .empty-hint { font-size: 12.5px; color: var(--ink-muted); font-style: italic; }
+
+  .section-title { font-size: 15.5px; font-weight: 700; margin: 4px 0 14px; color: var(--ink-primary); }
+  .ref-group { margin: 0 0 20px 4px; padding-left: 16px; border-left: 3px solid var(--border); }
+  .ref-group .card { padding: 16px 18px; margin-bottom: 14px; }
+  .ref-group .card:last-child { margin-bottom: 0; }
+  .ref-group .card h2 { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-title"><img src="/logo.png" class="sidebar-logo" alt="Lamson Retail Group"></div>
+  <a href="/guide.html" class="sidebar-link active">📘 Hướng dẫn</a>
+  <a href="/" class="sidebar-link">🗂️ Tư vấn chọn bảng</a>
+  <a href="/embeds.html" class="sidebar-link" id="embeds-tab">📊 Nhúng dashboard vào Lark</a>
+  <a href="/admin.html" class="sidebar-link" id="admin-tab" hidden>🛠️ Quản trị</a>
+</nav>
+
+<div class="main-col">
+<div class="topbar">
+  <button id="theme-toggle-btn" title="Đổi giao diện sáng/tối">◐</button>
+  <div class="account-cluster" id="account-cluster"></div>
+</div>
+
+<div class="main-scroll">
+<div class="page-content">
+
+<h1>Chào mừng đến với Data Explorer</h1>
+<p class="lead">Nơi tìm bảng dữ liệu đúng, xem trước số liệu thật, và chia sẻ báo cáo lên Lark — không cần biết SQL.</p>
+
+<div class="card">
+  <h2>App này làm được gì</h2>
+  <div class="feature-row">
+    <div class="feature-icon">🗂️</div>
+    <div>
+      <div class="feature-title">Tư vấn chọn bảng</div>
+      <div class="feature-desc">Mô tả báo cáo bạn muốn làm bằng lời thường, app gợi ý đúng bảng dữ liệu Serving phù hợp
+        kèm lý do — xem ở tab <a href="/">🗂️ Tư vấn chọn bảng</a>.</div>
+    </div>
+  </div>
+  <div class="feature-row">
+    <div class="feature-icon">🔍</div>
+    <div>
+      <div class="feature-title">Xem chi tiết & xem trước dữ liệu</div>
+      <div class="feature-desc">Bấm vào 1 bảng để xem mô tả cột, grain (1 dòng nghĩa là gì), cảnh báo dữ liệu nhạy cảm,
+        và xem trước 20 dòng thật.</div>
+    </div>
+  </div>
+  <div class="feature-row">
+    <div class="feature-icon">📊</div>
+    <div>
+      <div class="feature-title">Nhúng dashboard vào Lark</div>
+      <div class="feature-desc">3 cách để có 1 dashboard: tự làm bằng AI riêng của bạn, nhờ Claude Code làm hộ nếu đã
+        có quyền BigQuery, hoặc dùng mẫu có sẵn không cần code — xem 3 cách chi tiết bên dưới. Dù chọn cách nào, bước
+        cuối luôn là lấy link chia sẻ ở tab <a href="/embeds.html">📊 Nhúng dashboard vào Lark</a> (cần được cấp quyền
+        upload trước).</div>
+    </div>
+  </div>
+</div>
+
+<h2 class="section-title">🛠️ Các cách build dashboard</h2>
+
+<div class="ref-group">
+  <div class="card">
+    <h2>Prompt mẫu</h2>
+    <p>Vài prompt dùng nhờ AI (Claude Code / trợ lý nội bộ) làm dashboard hoặc khai thác dữ liệu — bấm sao chép rồi dán
+      thẳng cho AI. Danh sách sẽ được cập nhật thêm theo thời gian.</p>
+    <div id="prompt-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>Skill nên cài</h2>
+    <p>"Skill" là 1 bộ hướng dẫn đóng gói sẵn để Claude Code biết cách làm đúng quy trình của app này (đọc bảng, thiết
+      kế dashboard, nhúng Lark...) thay vì phải giải thích lại từ đầu mỗi lần. Tải file bên dưới, đặt vào
+      <code>.claude/skills/&lt;tên-skill&gt;/SKILL.md</code> trong project của bạn là dùng được ngay.</p>
+    <div id="skill-list"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🤝 Cách 1 — Tự làm bằng AI riêng của bạn (không cần quyền BigQuery)</h2>
+  <p>Dùng khi cần thiết kế phức tạp hơn mẫu có sẵn, và tài khoản Claude/ChatGPT của bạn KHÔNG kết nối được BigQuery
+    của công ty. App chuẩn bị sẵn dữ liệu mẫu + hướng dẫn để AI riêng của bạn tự viết file HTML.</p>
+  <ol class="skill-steps">
+    <li><strong>Tích chọn bảng cần dùng.</strong> Ở tab <a href="/">🗂️ Tư vấn chọn bảng</a>, mô tả nhu cầu rồi tích
+      checkbox ở các bảng phù hợp (tối đa 3 bảng nếu muốn dashboard có dữ liệu tự cập nhật) — bảng đã chọn hiện ở khay
+      "Bảng đang chọn" cuối trang.</li>
+    <li><strong>Tải file cho AI.</strong> Trong khay đó, bấm "📋 Copy prompt" rồi "📄 Tải data preview kèm mô tả" — file
+      tải về gồm schema, số dòng thật, grain, và 50 dòng mẫu của (các) bảng đã chọn, kèm sẵn hướng dẫn viết đúng chuẩn.</li>
+    <li><strong>Nhờ AI riêng của bạn thiết kế.</strong> Mở ChatGPT/Claude cá nhân → dán prompt đã copy → đính kèm file
+      .txt vừa tải. AI sẽ trả về đúng 2 file: <code>dashboard.html</code> và <code>data_query_spec.json</code>.</li>
+    <li><strong>Upload lên app.</strong> Vào tab <a href="/embeds.html">📊 Nhúng dashboard vào Lark</a> → "📁 Upload file
+      HTML có sẵn" → chọn <code>dashboard.html</code> → bật "Dữ liệu sống" → "🗄️ Bảng BigQuery" → "📝 Nhập JSON trực
+      tiếp" → dán nguyên nội dung <code>data_query_spec.json</code>.</li>
+    <li><strong>Bấm Upload</strong> → copy link <code>/d/{id}</code> → dán vào Lark.</li>
+  </ol>
+  <p style="font-size:11.5px;color:var(--ink-muted);">50 dòng chỉ để AI xem cấu trúc — dashboard khi mở luôn tự lấy số
+    liệu thật, không hiển thị đúng 50 dòng đó.</p>
+</div>
+
+<div class="card">
+  <h2>🛠️ Cách 2 — Nhờ Claude Code làm hộ toàn bộ (cần Claude đã có quyền BigQuery)</h2>
+  <p>Chỉ dùng được nếu Claude Code của bạn (hoặc của admin) đã kết nối thẳng tới BigQuery của công ty — khác Cách 1 ở
+    chỗ AI tự đọc được dữ liệu thật, không cần bạn tải file mẫu. Sau khi cài skill <code>lark-dashboard-embed</code> ở
+    trên, quy trình gồm:</p>
+  <ol class="skill-steps">
+    <li><strong>Chọn bảng.</strong> Tự chọn ở tab Tư vấn chọn bảng, hoặc để AI tự tìm nếu bạn chỉ mô tả chung chung.</li>
+    <li><strong>Nhờ AI thiết kế + viết file HTML.</strong> AI đọc schema và dữ liệu thật, tự soạn dashboard (KPI, biểu đồ)
+      và cấu hình "dữ liệu sống" nếu muốn số tự cập nhật mỗi lần mở link.</li>
+    <li><strong>Bạn upload file lên <a href="/embeds.html">📊 Nhúng dashboard vào Lark</a>.</strong> AI không upload hộ được
+      (cần đăng nhập Lark của chính bạn) — chỉ cần dán đúng file + JSON cấu hình AI đưa.</li>
+  </ol>
+  <p style="font-size:11.5px;color:var(--ink-muted);">Không có quyền upload? Vào tab Nhúng dashboard rồi bấm "Yêu cầu cấp quyền".</p>
+</div>
+
+<div class="card">
+  <h2>🧩 Cách 3 — Dùng dashboard mẫu có sẵn (không cần code, nhanh nhất)</h2>
+  <p>Phù hợp khi nhu cầu đơn giản: vài KPI + 1 biểu đồ theo ngày hoặc theo nhóm. App tự lắp dashboard, không cần tự
+    viết HTML hay biết SQL.</p>
+  <ol class="skill-steps">
+    <li><strong>Tìm bảng dữ liệu.</strong> Ở tab <a href="/">🗂️ Tư vấn chọn bảng</a>, mô tả báo cáo muốn làm — bảng phù
+      hợp sẽ được bold và đẩy lên đầu danh sách (không ẩn các bảng khác, vẫn xem được nếu advisor đoán chưa đúng).</li>
+    <li><strong>Chọn "Dashboard mẫu".</strong> Vào tab <a href="/embeds.html">📊 Nhúng dashboard vào Lark</a> → chọn
+      "🧩 Dashboard mẫu (không cần code)".</li>
+    <li><strong>Chọn 1 kiểu dashboard.</strong> Xu hướng theo thời gian (biểu đồ đường theo ngày), So sánh theo nhóm
+      (biểu đồ cột theo brand/kênh...), hoặc Bảng dữ liệu chi tiết (chỉ KPI + bảng).</li>
+    <li><strong>Chọn bảng + chỉ số.</strong> Chọn bảng nguồn, cột muốn chia nhóm (nếu kiểu dashboard cần), rồi thêm
+      từng chỉ số (cột số + cách tính Tổng/Đếm/Trung bình).</li>
+    <li><strong>Bấm "Tạo dashboard"</strong> → copy link <code>/d/{id}</code> hiện ra → dán vào Lark.</li>
+  </ol>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+(function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+  document.getElementById('theme-toggle-btn').onclick = () => {
+    const isDark = document.documentElement.dataset.theme === 'dark'
+      || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('theme', next);
+  };
+})();
+
+function renderAccount(me) {
+  const el = document.getElementById('account-cluster');
+  el.innerHTML = '';
+  if (!me) {
+    const login = document.createElement('a'); login.href = '/auth/lark/login'; login.textContent = 'Đăng nhập Lark';
+    el.appendChild(login);
+    return;
+  }
+  const avatar = document.createElement('div');
+  avatar.className = 'account-avatar';
+  avatar.textContent = (me.user.trim()[0] || '?').toUpperCase();
+  const name = document.createElement('span'); name.textContent = me.user;
+  const logout = document.createElement('a'); logout.href = '/auth/lark/logout'; logout.textContent = 'Đăng xuất';
+  el.append(avatar, name, logout);
+}
+
+let devUser = localStorage.getItem('dev_user') || 'dev@local';
+
+// Danh sách prompt mẫu — thêm entry mới vào đây khi có prompt mới cần chia sẻ.
+const PROMPT_TEMPLATES = [
+  {
+    title: 'Nhờ AI làm dashboard từ BigQuery',
+    text: 'Làm cho tao 1 dashboard theo dõi <mô tả điều bạn muốn theo dõi> từ bảng <tên bảng, hoặc để trống nếu chưa biết>, có dữ liệu sống để tự cập nhật, xong đưa hướng dẫn nhúng vào Lark.',
+  },
+];
+
+async function copyText(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = btn.textContent;
+    btn.textContent = '✅ Đã sao chép';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  } catch (err) { /* clipboard API bị chặn (vd http) -> im lặng, user tự bôi đen copy */ }
+}
+
+const promptListEl = document.getElementById('prompt-list');
+if (PROMPT_TEMPLATES.length === 0) {
+  promptListEl.innerHTML = '<p class="empty-hint">Chưa có prompt mẫu nào, sẽ cập nhật sớm.</p>';
+} else {
+  PROMPT_TEMPLATES.forEach((p) => {
+    const item = document.createElement('div');
+    item.className = 'prompt-item';
+    const title = document.createElement('div');
+    title.className = 'prompt-item-title';
+    title.textContent = p.title;
+    const box = document.createElement('div');
+    box.className = 'prompt-box';
+    box.textContent = p.text;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.textContent = '📋 Sao chép';
+    btn.onclick = () => copyText(p.text, btn);
+    item.append(title, box, btn);
+    promptListEl.appendChild(item);
+  });
+}
+
+// Danh sách skill có thể tải — thêm entry mới khi có file skill mới bỏ vào /skills/<tên>/SKILL.md.
+const SKILLS = [
+  {
+    name: 'lark-dashboard-embed',
+    desc: 'Hướng dẫn AI đọc bảng BigQuery thật, thiết kế + viết file HTML dashboard, rồi giao kèm hướng dẫn nhúng vào Lark qua tính năng Dashboard Embeds của app này.',
+    file: '/skills/lark-dashboard-embed/SKILL.md',
+  },
+];
+
+const skillListEl = document.getElementById('skill-list');
+if (SKILLS.length === 0) {
+  skillListEl.innerHTML = '<p class="empty-hint">Chưa có skill nào, sẽ cập nhật sớm.</p>';
+} else {
+  SKILLS.forEach((s) => {
+    const row = document.createElement('div');
+    row.className = 'skill-row';
+    const main = document.createElement('div');
+    main.className = 'skill-row-main';
+    const name = document.createElement('div');
+    name.className = 'skill-row-name';
+    name.textContent = s.name;
+    const desc = document.createElement('div');
+    desc.className = 'skill-row-desc';
+    desc.textContent = s.desc;
+    const path = document.createElement('div');
+    path.className = 'skill-row-path';
+    path.innerHTML = 'Cài vào: <code>.claude/skills/' + s.name + '/SKILL.md</code>';
+    main.append(name, desc, path);
+    const link = document.createElement('a');
+    link.className = 'copy-btn';
+    link.href = s.file;
+    link.download = '';
+    link.textContent = '⬇ Tải file';
+    row.append(main, link);
+    skillListEl.appendChild(row);
+  });
+}
+
+(async function init() {
+  try {
+    const res = await fetch('/api/me', {headers: {'X-Dev-User': devUser}});
+    if (res.ok) {
+      const me = await res.json();
+      devUser = me.user;
+      renderAccount(me);
+      document.getElementById('admin-tab').hidden = !me.is_admin;
+      return;
+    }
+  } catch (e) { /* rơi xuống nhánh chưa đăng nhập bên dưới */ }
+  renderAccount(null);
+})();
+</script>
+
+</body>
+</html>
