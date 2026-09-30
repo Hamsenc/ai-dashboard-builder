@@ -10,6 +10,7 @@ import csv
 import io
 import json
 import secrets
+import time
 
 import openpyxl
 from api.catalog import get_bq_client
@@ -181,6 +182,21 @@ def request_access(user: str = Depends(get_current_user)):
     return {"status": "requested"}
 
 
+async def _read_html(file: UploadFile) -> str:
+    """Kiểm tra + đọc file HTML dashboard (đuôi .html, <= EMBED_MAX_HTML_BYTES, UTF-8)."""
+    if not file.filename or not file.filename.lower().endswith(".html"):
+        raise HTTPException(400, "Chỉ chấp nhận file .html.")
+    if file.size is not None and file.size > Config.EMBED_MAX_HTML_BYTES:
+        raise HTTPException(413, f"File vượt quá giới hạn {Config.EMBED_MAX_HTML_BYTES:,} bytes.")
+    raw = await file.read(Config.EMBED_MAX_HTML_BYTES + 1)
+    if len(raw) > Config.EMBED_MAX_HTML_BYTES:
+        raise HTTPException(413, f"File vượt quá giới hạn {Config.EMBED_MAX_HTML_BYTES:,} bytes.")
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise HTTPException(400, "File phải là văn bản UTF-8.") from e
+
+
 @router.post("")
 async def create_embed(
     file: UploadFile,
@@ -195,18 +211,7 @@ async def create_embed(
     if not can_use_embeds(user):
         raise HTTPException(403, "Bạn chưa được cấp quyền upload dashboard — liên hệ admin để cấp quyền embed.")
 
-    if not file.filename or not file.filename.lower().endswith(".html"):
-        raise HTTPException(400, "Chỉ chấp nhận file .html.")
-    if file.size is not None and file.size > Config.EMBED_MAX_HTML_BYTES:
-        raise HTTPException(413, f"File vượt quá giới hạn {Config.EMBED_MAX_HTML_BYTES:,} bytes.")
-
-    raw = await file.read(Config.EMBED_MAX_HTML_BYTES + 1)
-    if len(raw) > Config.EMBED_MAX_HTML_BYTES:
-        raise HTTPException(413, f"File vượt quá giới hạn {Config.EMBED_MAX_HTML_BYTES:,} bytes.")
-    try:
-        html = raw.decode("utf-8")
-    except UnicodeDecodeError as e:
-        raise HTTPException(400, "File phải là văn bản UTF-8.") from e
+    html = await _read_html(file)
 
     client = get_bq_client()
 
@@ -303,8 +308,8 @@ class UpdateEmbedRequest(BaseModel):
 
 @router.post("/{embed_id}")
 def update_embed(embed_id: str, req: UpdateEmbedRequest, user: str = Depends(get_current_user)):
-    """Sửa tên/dữ liệu sống của embed đã tạo — KHÔNG đổi embed_id/link, KHÔNG đổi
-    file HTML (muốn đổi nội dung file thì thu hồi rồi upload lại). Ghi thêm 1 event
+    """Sửa tên/dữ liệu sống của embed đã tạo — KHÔNG đổi embed_id/link. Đổi file HTML
+    đi qua replace_embed_html() (endpoint riêng vì hàm này nhận JSON, không mang file). Ghi thêm 1 event
     'updated' mang đủ mọi field (kể cả gcs_path/data_file_* giữ nguyên từ bản ghi hiện
     tại) — đúng quy ước append-only, "current" luôn là bản ghi mới nhất theo embed_id."""
     client = get_bq_client()
@@ -371,6 +376,33 @@ async def update_embed_data_file(embed_id: str, data_file: UploadFile, user: str
     )
     invalidate_cache(embed_id)
     return {"embed_id": embed_id, "data_file_name": data_file_name, "column_warning": column_warning}
+
+
+@router.post("/{embed_id}/html")
+async def replace_embed_html(embed_id: str, file: UploadFile, user: str = Depends(get_current_user)):
+    """Thay file HTML của embed đã tạo mà GIỮ NGUYÊN embed_id/link — trước đây muốn đổi
+    giao diện phải thu hồi rồi upload lại, ra link mới phải gửi lại cho mọi người. Ghi
+    vào đường dẫn GCS mới (không ghi đè) để các event cũ vẫn trỏ đúng bản HTML của nó."""
+    client = get_bq_client()
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
+        raise HTTPException(404, "Không tìm thấy embed, hoặc đã bị thu hồi trước đó.")
+    _assert_can_edit(client, embed, user)
+
+    html = await _read_html(file)
+    gcs_path = f"embeds/{embed_id}_{int(time.time())}.html"
+    await run_in_threadpool(upload_html, gcs_path, html)
+    await run_in_threadpool(
+        embeds_store.insert_embed_event,
+        client, embed_id, "updated",
+        created_by=user, title=embed["title"], gcs_path=gcs_path,
+        data_table_id=embed.get("data_table_id"), data_query_spec=embed.get("data_query_spec"),
+        owner_name=embed.get("owner_name"), prompt_note=embed.get("prompt_note"),
+        data_file_gcs_path=embed.get("data_file_gcs_path"), data_file_name=embed.get("data_file_name"),
+        group_name=embed.get("group_name"),
+        data_file_columns=embed.get("data_file_columns"),
+    )
+    return {"embed_id": embed_id, "view_url": f"/d/{embed_id}"}
 
 
 @router.post("/{embed_id}/revoke")

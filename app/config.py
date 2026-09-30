@@ -66,4 +66,4 @@ class Config:
     # Cache kết quả query sống trong process theo embed_id — dashboard chỉ load lại
     # lúc mở trang/bấm refresh (không tự poll), cache này chỉ để tránh nhiều người
     # mở cùng lúc làm tốn BigQuery lặp lại vô ích.
-    EMBED_DATA_CACHE_TTL_SECONDS = int(os.environ.get("EMBED_DATA_CACHE_TTL_SECONDS", "300"))
+    EMBED_DATA_CACHE_TTL_SECONDS = int(os.environ.get("EMBED_DATA_CACHE_TTL_SECONDS", "900"))

@@ -788,7 +788,7 @@ Quy tắc bắt buộc:
 - order_by[].column phải là 1 tên nằm trong "columns" hoặc là 1 alias trong "aggregations" — không sort được theo cột chưa chọn.
 - Có cả columns và aggregations -> tự động GROUP BY theo columns. Chỉ có aggregations (columns rỗng) -> trả về đúng 1 dòng tổng hợp toàn bảng.
 - KHÔNG hỗ trợ JOIN/subquery/SQL tự do — mỗi spec chỉ 1 bảng, 1 tầng aggregation.
-- limit: số nguyên dương, tối đa 10000, mặc định 500 nếu bỏ trống.
+- limit: số nguyên dương, tối đa 20000, mặc định 500 nếu bỏ trống.
 
 --- Nếu cần dùng NHIỀU BẢNG trong 1 dashboard (tối đa 3 bảng) ---
 Bọc các spec đơn ở trên vào 1 object "specs", mỗi key là 1 tên bạn tự đặt (chỉ chữ/số/gạch dưới, không bắt đầu bằng số — đây cũng là key mà fetch('data') sẽ trả về):

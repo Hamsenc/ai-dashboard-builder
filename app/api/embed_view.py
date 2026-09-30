@@ -39,7 +39,7 @@ _BODY_CLOSE_RE = re.compile(r"</body>", re.IGNORECASE)
 
 def _toolbar_html(embed_id: str, embed: dict[str, Any]) -> str:
     """Toolbar cố định góc trên-phải, chèn vào MỌI dashboard tự động theo nguồn dữ
-    liệu — không cần tác giả HTML tự code nút này. 'Làm mới' bypass cache 5 phút
+    liệu — không cần tác giả HTML tự code nút này. 'Làm mới' bypass cache 15 phút
     của /d/{id}/data (xem invalidate_cache) bằng cách reload trang với ?refresh=1.
     'Upload Excel' gọi thẳng /api/embeds/{id}/data-file có sẵn — cookie session tự
     gửi kèm nếu trình duyệt đang đăng nhập (path cookie=/api, xem auth/session.py);

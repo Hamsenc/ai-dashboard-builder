@@ -224,7 +224,7 @@
 <div class="card">
   <h2 id="form-title-label">Upload dashboard mới</h2>
   <div class="edit-banner" id="edit-banner" hidden>
-    <span>Đang sửa "<strong id="edit-banner-title"></strong>" — file HTML giữ nguyên, chỉ đổi tên/dữ liệu sống.</span>
+    <span>Đang sửa "<strong id="edit-banner-title"></strong>" — link giữ nguyên, kể cả khi thay file HTML.</span>
     <button type="button" class="link-btn" id="cancel-edit-btn">Hủy sửa</button>
   </div>
 
@@ -266,6 +266,7 @@
   <div class="field" id="file-field">
     <label class="field-label" for="f-file">File HTML</label>
     <input type="file" id="f-file" accept=".html,text/html" />
+    <div class="hint" id="file-edit-hint" hidden>Để trống nếu giữ file cũ. Chọn file mới để thay giao diện — link giữ nguyên, không cần gửi lại.</div>
     <iframe id="file-preview-frame" hidden style="width:100%; height:400px; border:1px solid var(--border); border-radius:8px; margin-top:10px; background:#fff;"></iframe>
   </div>
 
@@ -334,7 +335,7 @@
           </div>
 
           <div class="sub-label">Giới hạn số dòng trả về</div>
-          <input type="number" id="spec-limit" class="limit-row" value="500" min="1" max="10000" />
+          <input type="number" id="spec-limit" class="limit-row" value="500" min="1" max="20000" />
         </div>
       </div>
 
@@ -344,7 +345,7 @@
         <p class="hint">
           Không hỗ trợ SQL tự do — chỉ nhận spec JSON: <code>table_id</code>, <code>columns</code>,
           <code>aggregations[]</code> ({column, fn, alias}), <code>filters[]</code> ({column, op, value, type}),
-          <code>order_by[]</code> ({column, direction}), <code>limit</code> (tối đa 10000, mặc định 500).
+          <code>order_by[]</code> ({column, direction}), <code>limit</code> (tối đa 20000, mặc định 500).
         </p>
         <p class="hint">
           Cần dữ liệu từ nhiều bảng trong cùng 1 dashboard? Bọc các spec trên vào 1 object
@@ -405,7 +406,7 @@
             <button type="button" class="secondary-btn" id="tpl-add-filter-btn">+ Thêm điều kiện lọc</button>
 
             <div class="sub-label">Giới hạn số dòng trả về</div>
-            <input type="number" id="tpl-limit" class="limit-row" value="500" min="1" max="10000" />
+            <input type="number" id="tpl-limit" class="limit-row" value="500" min="1" max="20000" />
           </div>
         </details>
       </div>
@@ -1012,7 +1013,9 @@ async function enterEditMode(embed) {
   document.querySelector('input[name="create-mode"][value="upload"]').checked = true;
   applyCreateModeVisibility();
   document.getElementById('form-title-label').textContent = 'Sửa dashboard';
-  document.getElementById('file-field').hidden = true;
+  document.getElementById('f-file').value = '';
+  clearFilePreview();
+  document.getElementById('file-edit-hint').hidden = false;
   document.getElementById('edit-banner-title').textContent = embed.title || '(không có tên)';
   document.getElementById('edit-banner').hidden = false;
   document.getElementById('f-title').value = embed.title || '';
@@ -1052,6 +1055,7 @@ function exitEditMode() {
   document.getElementById('create-mode-field').hidden = false;
   document.querySelector('input[name="create-mode"][value="upload"]').checked = true;
   document.getElementById('file-field').hidden = false;
+  document.getElementById('file-edit-hint').hidden = true;
   document.getElementById('edit-banner').hidden = true;
   document.getElementById('f-title').value = '';
   document.getElementById('f-owner-name').value = '';
@@ -1494,7 +1498,7 @@ document.getElementById('upload-btn').onclick = async () => {
   const dataFile = dataMode === 'datafile' ? dataFileInput.files[0] : null;
 
   if (editingEmbedId) {
-    await saveEdit(editingEmbedId, title, ownerName, promptNote, groupName, specObj, dataFile, btn, resultEl);
+    await saveEdit(editingEmbedId, title, ownerName, promptNote, groupName, specObj, dataFile, fileInput.files[0] || null, btn, resultEl);
   } else {
     await submitCreate(title, ownerName, promptNote, groupName, fileInput, specObj, dataFile, btn, resultEl);
   }
@@ -1598,27 +1602,34 @@ async function submitCreate(title, ownerName, promptNote, groupName, fileInput, 
   }
 }
 
-async function saveEdit(embedId, title, ownerName, promptNote, groupName, specObj, dataFile, btn, resultEl) {
+// Upload multipart riêng: update_embed() nhận JSON, không mang được file.
+async function postEmbedFile(embedId, path, field, file, failPrefix) {
+  const fd = new FormData();
+  fd.append(field, file);
+  const res = await fetch(`/api/embeds/${encodeURIComponent(embedId)}/${path}`, {
+    method: 'POST', headers: {'X-Dev-User': devUser}, body: fd,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try { const parsed = JSON.parse(text); if (parsed && typeof parsed.detail === 'string') message = parsed.detail; } catch (e) {}
+    throw new Error(failPrefix + message);
+  }
+  return res.json();
+}
+
+async function saveEdit(embedId, title, ownerName, promptNote, groupName, specObj, dataFile, htmlFile, btn, resultEl) {
   setButtonBusy(btn, 'Đang lưu...');
   try {
     const updated = await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}`, {
       method: 'POST', body: JSON.stringify({title, data_query_spec: specObj, owner_name: ownerName, prompt_note: promptNote, group_name: groupName}),
     });
     let dataFileName = cachedEmbeds.find(e => e.embed_id === embedId)?.data_file_name || null;
+    if (htmlFile) {
+      await postEmbedFile(embedId, 'html', 'file', htmlFile, 'Lưu tên/spec thành công nhưng lỗi thay file HTML: ');
+    }
     if (dataFile) {
-      // Endpoint riêng vì update_embed() nhận JSON, không mang được multipart file.
-      const fd = new FormData();
-      fd.append('data_file', dataFile);
-      const res = await fetch(`/api/embeds/${encodeURIComponent(embedId)}/data-file`, {
-        method: 'POST', headers: {'X-Dev-User': devUser}, body: fd,
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let message = text;
-        try { const parsed = JSON.parse(text); if (parsed && typeof parsed.detail === 'string') message = parsed.detail; } catch (e) {}
-        throw new Error('Lưu tên/spec thành công nhưng lỗi upload file dữ liệu: ' + message);
-      }
-      const fileResult = await res.json();
+      const fileResult = await postEmbedFile(embedId, 'data-file', 'data_file', dataFile, 'Lưu tên/spec thành công nhưng lỗi upload file dữ liệu: ');
       dataFileName = fileResult.data_file_name;
       var columnWarning = fileResult.column_warning || null;
     }
@@ -1630,7 +1641,7 @@ async function saveEdit(embedId, title, ownerName, promptNote, groupName, specOb
     exitEditMode();
     renderEmbeds(cachedEmbeds);
     resultEl.className = 'success';
-    resultEl.textContent = '✅ Đã lưu thay đổi.';
+    resultEl.textContent = htmlFile ? '✅ Đã lưu và thay file HTML — link giữ nguyên.' : '✅ Đã lưu thay đổi.';
     if (columnWarning) {
       const warn = document.createElement('div');
       warn.className = 'warn-note';
