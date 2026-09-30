@@ -8,6 +8,7 @@ from __future__ import annotations
 import mimetypes
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from api.catalog import get_bq_client
@@ -209,7 +210,11 @@ def get_embed_data(embed_id: str):
             # (cũ, embed tạo trước tính năng này) -> payload {columns, rows} phẳng
             # như trước giờ, để KHÔNG bể các dashboard đã upload/nhúng Lark từ trước.
             plans = query_spec.build_queries(client, spec_dict)
-            payload = {name: _run_plan(client, plan) for name, plan in plans.items()}
+            # Chạy song song: mỗi query tốn dry-run + chạy thật (~5s), chạy lần lượt
+            # 3 spec khiến người mở đầu tiên sau khi hết cache phải chờ ~15s.
+            with ThreadPoolExecutor(max_workers=len(plans)) as pool:
+                futures = {name: pool.submit(_run_plan, client, plan) for name, plan in plans.items()}
+                payload = {name: f.result() for name, f in futures.items()}
         else:
             plan = query_spec.build_query(client, spec_dict)
             payload = _run_plan(client, plan)

@@ -59,7 +59,10 @@ class Config:
     # Ngưỡng bytes riêng cho query sống của embed (khác BQ_MAX_BYTES_BILLED chung) vì
     # đây là endpoint PUBLIC không cần đăng nhập — 1 link lộ ra ngoài không được phép
     # kéo theo chi phí BigQuery lớn. execution.bq_client.execute() enforce ngưỡng này.
-    EMBED_DATA_MAX_BYTES_BILLED = int(os.environ.get("EMBED_DATA_MAX_BYTES_BILLED", str(200 * 1024 * 1024)))
+    # 500MB: view chiến dịch (vd vw_sales_hourly_sku_wh_bst20102026) quét fact order
+    # 2 mùa cùng lúc, đã đo 148MB mới hết tháng 9 và tăng theo ngày — 200MB cũ sẽ bị
+    # chặn giữa mùa cao điểm. ~0,003 USD/query, vẫn chặn được query lỡ tay quét cả bảng.
+    EMBED_DATA_MAX_BYTES_BILLED = int(os.environ.get("EMBED_DATA_MAX_BYTES_BILLED", str(500 * 1024 * 1024)))
     # Cache kết quả query sống trong process theo embed_id — dashboard chỉ load lại
     # lúc mở trang/bấm refresh (không tự poll), cache này chỉ để tránh nhiều người
     # mở cùng lúc làm tốn BigQuery lặp lại vô ích.
