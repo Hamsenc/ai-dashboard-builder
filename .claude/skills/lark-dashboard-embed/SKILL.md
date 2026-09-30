@@ -66,170 +66,94 @@ Nếu cần join/so sánh nhiều bảng (VD 1 bảng actual + 1 bảng target),
 
 - Nếu chỉ cần dashboard "tĩnh" (số liệu chốt tại lúc build, không cần tự cập nhật) thì bỏ qua toàn bộ ràng buộc này — chỉ cần query 1 lần lấy số thật rồi nhúng cứng vào HTML, không cần `data_query_spec` (xem Bước 5). Đây cũng là lựa chọn hợp lý khi cần JOIN nhiều bảng hoặc logic quá phức tạp cho 1 tầng aggregation.
 
-## Bước 3 — Thiết kế giao diện & cấu trúc dashboard
+## Bước 3 — Giao diện theo `lsr-report-style`, ràng buộc kỹ thuật theo app
 
-Đây là phần quyết định dashboard có "ra hồn" hay không. Dùng đúng các giá trị cụ thể (hex màu, size, code mẫu) dưới đây làm mặc định — chỉ đổi khi user nêu rõ brand color/font riêng. Toàn bộ rút từ 2 dashboard đã build thật (Marketing Operations, Supply Chain Management) nên đã proven đẹp và chạy được, không phải nguyên tắc suông.
+**Giao diện (màu, font, bố cục, loại chart, KPI, hiệu ứng) lấy hoàn toàn từ skill `lsr-report-style`** — load skill đó trước khi thiết kế: màu brand HAPAS/MATEMADE, màu kênh cố định, màu trạng thái đạt/sát/chậm, Be Vietnam Pro, định dạng số Việt Nam, checklist tránh "trang AI". Skill này không đặt thêm bảng màu/font/animation nào. Riêng phần "publish bằng Artifact" của `lsr-report-style` KHÔNG áp dụng ở đây — giao file HTML theo Bước 4-6.
 
-### 3.1 Bảng màu mặc định (5 role ngữ nghĩa)
+Phần dưới chỉ là ràng buộc kỹ thuật để dashboard chạy đúng trong app `/d/{id}` + iframe Lark.
 
-Gán 5 chủ đề dữ liệu của dashboard (nhóm metric, kênh, loại chi phí...) vào đúng 5 role màu này theo thứ tự quan trọng giảm dần, dùng lại ĐÚNG role đó ở mọi KPI card/badge/chart liên quan — không tự chọn màu khác cho cùng 1 chủ đề ở 2 chỗ khác nhau:
-
-| Role | Màu đậm (border/text/line) | Tint nhạt (nền badge/icon) | Gợi ý gán |
-|---|---|---|---|
-| 1 | `#7c3aed` (tím) | `#ede9fe` | Metric tổng quan nhất / chi phí chính |
-| 2 | `#0891b2` (xanh lam) | `#e0f2fe` | Metric số lượng / kênh chính |
-| 3 | `#059669` (xanh lá) | `#d1fae5` | Tỷ lệ chuyển đổi / tích cực |
-| 4 | `#e11d48` (đỏ hồng) | `#ffe4e6` | Chi phí đơn vị / cảnh báo / kém hiệu quả |
-| 5 | `#d97706` (cam vàng) | `#fef3c7` | Hiệu suất / lợi nhuận |
-
-Neutral dùng chung: nền trang `#f0f4f8`, card `#ffffff` bo góc `16px` shadow `0 1px 3px rgba(0,0,0,.05)` (hover: `translateY(-2px)` + shadow đậm hơn `0 8px 20px rgba(0,0,0,.08)`), chữ chính `#1e293b`, chữ mờ (muted) `#64748b`, viền `#e2e8f0`.
-
-Nếu dữ liệu chỉ có 1-2 chủ đề (không đủ 5) thì chỉ dùng 1-2 role đầu, đừng ép dùng hết 5 màu. Nếu dashboard cần tông đơn sắc (kiểu SCM — nhiều trang dày đặc số liệu, ít màu cho dễ nhìn) thì dùng 1 accent chính (ví dụ `#2B4EAF` navy) + 3-4 shade nhạt dần của accent đó thay cho bảng 5-role, nền `#EEF2F7`, card `#FFFFFF` bo `10px`.
-
-### 3.2 Typography
-
-Google Fonts: **DM Sans** cho chữ thường, **DM Mono** cho toàn bộ con số (KPI, bảng, tick label) — load qua `<link>` Google Fonts, không self-host. Với dashboard nhiều số liệu dày đặc (nhiều bảng, nhiều trang) có thể dùng `Segoe UI`/system-ui 13px cho gọn thay vì DM Sans. Size mặc định: title lớn `28-32px` bold, chart title `15px` bold, subtitle/label `12-13px` muted, KPI number `28-32px` DM Mono bold, badge `11px` bold uppercase.
-
-### 3.3 State & filter pattern (bắt buộc theo đúng khung này)
+### 3.1 State & filter
 
 ```js
-var ALL_ROWS = [];        // toàn bộ dữ liệu đã fetch/query, KHÔNG đổi sau khi load
-var currentFilters = {};  // state filter hiện tại
+var ALL_ROWS = [];        // dữ liệu đã fetch, KHÔNG đổi sau khi load
+var currentFilters = {};
 
 function applyFilters() {
   var rows = ALL_ROWS.filter(r => /* so khớp currentFilters */ true);
-  renderDashboard(rows);  // 1 điểm vào duy nhất, vẽ lại TOÀN BỘ chart/KPI/table
+  renderDashboard(rows);  // 1 điểm vào duy nhất
 }
+```
+
+Không patch riêng 1 chart khi filter đổi — luôn đi qua `applyFilters()` → `renderDashboard()`. Mỗi hàm vẽ chart tự huỷ instance cũ trước khi vẽ (xem 3.3).
+
+### 3.2 Tab — vẽ khi mở lần đầu (lazy)
+
+Chốt 1 cách duy nhất: **chỉ vẽ tab khi nó được mở lần đầu**, không vẽ sẵn tab ẩn (chart init trong `display:none` bị kích thước 0).
+
+```js
+var currentTab = 'overview';
+var rendered = {};        // tab nào đã vẽ với filter hiện tại
+var TAB_RENDER = { overview: renderOverview, kenh: renderKenh /* ... */ };
 
 function renderDashboard(rows) {
-  renderKPIs(rows);
-  renderCharts(rows);   // mỗi hàm con tự gọi dc(id) hoặc Plotly.react() trước khi vẽ
-  renderTable(rows);
-  if (!window._dashAnimated) { runEntryAnimation(); window._dashAnimated = true; }
+  window._rows = rows;
+  rendered = {};                       // filter đổi → mọi tab thành "cũ"
+  showTab(currentTab);
+}
+
+function showTab(name) {
+  currentTab = name;
+  document.querySelectorAll('.tab-panel').forEach(p => p.hidden = p.dataset.tab !== name);
+  if (!rendered[name]) { TAB_RENDER[name](window._rows); rendered[name] = true; }
+  else resizeCharts(name);             // đã vẽ rồi → chỉ resize (cửa sổ có thể đã đổi cỡ lúc tab ẩn)
 }
 ```
 
-Không patch riêng 1 chart khi filter đổi — luôn đi qua `applyFilters()` → `renderDashboard()`. Nếu dashboard nhiều tab/trang (kiểu SCM), thêm biến `currentTab` global, mỗi tab có hàm render riêng (`renderMfg()`, `renderInv()`...) chỉ gọi khi user bấm vào tab đó, không render sẵn tab ẩn.
+Chuyển tab bằng `<button onclick="showTab('kenh')">`, **KHÔNG dùng `<a href="#kenh">` hay `location.hash`**: app tự chèn `<base href="/d/{id}/">` nên `href="#kenh"` bị hiểu thành `/d/{id}/#kenh` → trình duyệt tải lại trang thay vì nhảy tab; và trong iframe Lark, hash/deep-link `#tab` có thể không hoạt động. Nhớ tab bằng `localStorage` thì bọc try/catch (iframe có thể chặn storage).
 
-### 3.4 KPI card — markup & CSS cụ thể
+### 3.3 Thư viện chart (cdnjs)
 
-```html
-<div class="kpi-card" style="border-left:4px solid var(--role-color)">
-  <svg class="kpi-icon" ...></svg> <!-- icon 20-24px, màu var(--role-color), góc trên phải -->
-  <div class="kpi-label">TOTAL SPEND</div>
-  <div class="kpi-number">4.3tr</div>
-  <div class="kpi-subtitle">All campaigns · all channels</div>
-</div>
-```
-```css
-.kpi-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.05);position:relative}
-.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08)}
-.kpi-icon{position:absolute;top:16px;right:16px;width:22px;height:22px}
-.kpi-label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b}
-.kpi-number{font-family:'DM Mono',monospace;font-size:30px;font-weight:700;margin:6px 0}
-.kpi-subtitle{font-size:12px;color:#94a3b8}
-```
-KPI grid: `grid-template-columns:repeat(N,1fr);gap:16px` với N = số KPI (thường 3-5). Mỗi KPI viết công thức cụ thể ngay lúc thiết kế (ví dụ `Spend / Leads`) — không để tự suy diễn khi code.
+Mặc định **Apache ECharts** (heatmap, waterfall, markArea giai đoạn...), Chart.js cho chart nhỏ đơn giản, Plotly nếu thật cần. Quy tắc tương ứng từng thư viện:
 
-### 3.5 Chart card & config chart cụ thể
-
-Header mọi chart card:
-```html
-<div class="chart-card">
-  <div class="chart-header">
-    <div><div class="chart-title">Spend vs Leads Over Time</div><div class="chart-subtitle">Monthly · dual-axis</div></div>
-    <span class="badge" style="color:var(--role-color);background:var(--role-tint)">Monthly Trend</span>
-  </div>
-  <div id="chartX" style="height:280px"></div>
-</div>
-```
-`.badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}`
-
-**Nếu dùng Plotly** (cdnjs, mọi chart dùng chung layout nền):
-```js
-function plotlyLayout(extra) {
-  return Object.assign({
-    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-    font: { family: 'DM Sans, sans-serif', color: '#475569', size: 12 },
-    margin: { t: 20, r: 20, b: 40, l: 50 },
-    xaxis: { gridcolor: '#e2e8f0', zeroline: false },
-    yaxis: { gridcolor: '#e2e8f0', zeroline: false },
-    legend: { orientation: 'h', y: 1.15 },
-  }, extra);
-}
-Plotly.react('chartX', traces, plotlyLayout({}), { displayModeBar: false, responsive: true });
-```
-Luôn `Plotly.react()` khi vẽ lại (KHÔNG `newPlot()`), gridcolor cố định `#e2e8f0`, `displayModeBar:false`.
-
-**Nếu dùng Chart.js** (cdnjs 4.4.0, phù hợp dashboard nhiều chart nhỏ/nhiều trang):
+**ECharts** — `dispose()` trước `init()`, `resize()` khi mở lại tab và khi đổi cỡ cửa sổ:
 ```js
 var charts = {};
-function dc(id) { try { charts[id] && charts[id].destroy(); } catch (e) {} }
-function mkBar(id, cfg) {
-  dc(id);
-  charts[id] = new Chart(document.getElementById(id), Object.assign({}, cfg, {
-    options: Object.assign({ responsive: true, maintainAspectRatio: false }, cfg.options || {})
-  }));
+function ec(id, option) {
+  var el = document.getElementById(id);
+  var old = echarts.getInstanceByDom(el); if (old) old.dispose();
+  charts[id] = echarts.init(el);
+  charts[id].setOption(option);
+  return charts[id];
 }
+function resizeCharts(tab) {
+  document.querySelectorAll('.tab-panel[data-tab="' + tab + '"] [id]').forEach(el => {
+    var c = echarts.getInstanceByDom(el); if (c) c.resize();
+  });
+}
+window.addEventListener('resize', () => resizeCharts(currentTab));
 ```
-Canvas luôn bọc trong wrapper cố định chiều cao:
-```html
-<div class="ch-wrap" style="height:150px"><canvas id="chartX"></canvas></div>
+Div chart phải có chiều cao cố định (`style="height:280px"`).
+
+**Chart.js** — `destroy()` trước khi tạo mới, thiếu sẽ lỗi "Canvas already in use":
+```js
+function dc(id) { try { charts[id] && charts[id].destroy(); } catch (e) {} }
+// canvas bọc wrapper cố định chiều cao, options: {responsive:true, maintainAspectRatio:false}
 ```
 ```css
 .ch-wrap > canvas { display:block; width:100% !important; height:100% !important; }
 ```
-Gọi `dc(id)` đầu MỌI hàm vẽ chart trước khi tạo mới — thiếu bước này sẽ lỗi "Canvas already in use" khi filter đổi.
 
-Với mỗi chart, ghi rõ ngay lúc thiết kế (đừng để code tự suy diễn): loại chart, cột nguồn, cách aggregate (group theo cột nào, SUM/AVG/COUNT), và ngưỡng màu nếu cần thể hiện hiệu suất — ví dụ chia tercile: 33% thấp nhất → role 3 (xanh, tốt), 33% giữa → role 5 (cam, trung bình), 33% cao nhất → role 4 (đỏ, kém).
+**Plotly** — luôn `Plotly.react()` khi vẽ lại (không `newPlot()`), `Plotly.Plots.resize(el)` khi mở lại tab.
 
-### 3.6 Bảng dữ liệu top-N
+Với mỗi chart, ghi rõ ngay lúc thiết kế: loại chart, cột nguồn, cách aggregate (group theo cột nào, SUM/AVG/COUNT).
 
-Rule cố định: aggregate theo cột định danh (SUM các cột số) → tính lại các chỉ số tỷ lệ SAU khi gộp (VD `CPL = Spend/Leads` tính sau khi đã SUM Spend và Leads theo nhóm, không SUM CPL trực tiếp) → sort giảm dần theo cột chính → cắt top N (thường 10-15). Cột số dùng font DM Mono; có thể thêm 1 cột "Progress" là thanh ngang cao ~7px, độ rộng tỉ lệ `value/max(value)`, màu theo role của nhóm dòng đó.
+### 3.4 Bảng top-N
 
-### 3.7 Hàm format số — bắt buộc kiểu Việt Nam
+Aggregate theo cột định danh (SUM các cột số) → tính lại chỉ số tỷ lệ SAU khi gộp (`CPL = SUM(Spend)/SUM(Leads)`, không SUM CPL) → sort → cắt top N.
 
-```js
-function fmt(n) {
-  if (n == null || isNaN(n)) return '—';
-  var neg = n < 0; n = Math.abs(n);
-  var s;
-  if (n >= 1e9) s = (n / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' tỷ';
-  else if (n >= 1e6) s = (n / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' tr';
-  else s = Math.round(n).toLocaleString('vi-VN');
-  return (neg ? '-' : '') + s;
-}
-```
-`toLocaleString('vi-VN')` tự cho dấu chấm ngăn hàng nghìn + dấu phẩy cho phần thập phân — đúng chuẩn Việt Nam, không tự viết regex thay dấu tay. Dùng 1 hàm `fmt()` này ở MỌI nơi hiển thị số (KPI, bảng, tick label chart) — không viết rule format riêng lẻ ở từng chart.
+### 3.5 Format số & responsive
 
-### 3.8 Animation — code cụ thể
-
-```css
-@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-.fade-up { animation: fadeUp .5s ease both; }
-```
-```js
-function runEntryAnimation() {
-  document.querySelectorAll('.kpi-card').forEach(function (el, i) {
-    el.classList.add('fade-up'); el.style.animationDelay = (i * 70) + 'ms';
-  });
-  document.querySelectorAll('.chart-card').forEach(function (el, i) {
-    el.classList.add('fade-up'); el.style.animationDelay = (350 + i * 80) + 'ms';
-  });
-}
-```
-Chỉ gọi `runEntryAnimation()` 1 lần (xem `window._dashAnimated` ở mục 3.3) — filter đổi thì render lại data nhưng KHÔNG chạy lại animation.
-
-### 3.9 Responsive — breakpoint cụ thể
-
-```css
-@media (max-width: 960px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .chart-row-2, .chart-row-3 { grid-template-columns: 1fr; }
-  .filter-bar { flex-direction: column; align-items: stretch; }
-}
-```
-Nếu dashboard ưu tiên hiển thị màn hình rộng cho demo/TV (không cần dùng trên điện thoại) thì có thể bỏ qua mục này khi user xác nhận không cần responsive — nhưng mặc định vẫn nên có vì Lark có thể mở trên mobile app.
+Dùng 1 hàm format duy nhất cho mọi chỗ hiện số (KPI, bảng, tick, tooltip), theo quy tắc số của `lsr-report-style`. Giữ responsive vì Lark có thể mở trên mobile app.
 
 ## Bước 4 — Viết file HTML dashboard
 
@@ -241,7 +165,6 @@ Nếu dashboard ưu tiên hiển thị màn hình rộng cho demo/TV (không c�
   2. User upload các file headless này TRƯỚC (xem Bước 6) để có `embed_id` thật cho từng cái.
   3. Trong file HTML chính, hardcode URL tuyệt đối tới các embed đó: `fetch('/d/<embed_id-đã-có>/data')`, cộng với `fetch('data')` cho chính spec của nó (đơn hoặc nhiều bảng, tối đa 3).
   4. Vẫn chỉ có **1 link duy nhất** (file chính) đưa cho người xem — các file headless không ai cần mở trực tiếp.
-- Định dạng số kiểu Việt Nam trừ khi user yêu cầu khác: dưới 1 triệu ghi số nguyên đủ có dấu chấm ngăn cách hàng nghìn, từ 1 triệu trở lên rút gọn "X tr", từ 1 tỷ "X tỷ" — không dùng K/M/B kiểu Anh.
 - Trước khi coi là xong, tự test cục bộ trong scratchpad: dựng 1 `http.server` giả lập route `/d/{id}` và `/d/{id}/data` (trả JSON mock cùng cấu trúc `{columns, rows}` sẽ nhận từ BigQuery thật), `node --check` soát cú pháp JS, và chụp ảnh bằng headless Chrome (`--headless=new --screenshot`) để xác nhận layout/số liệu hiển thị đúng — đặc biệt nếu có nhiều tab/filter thì dùng 1 đoạn script tự động click qua từng trạng thái trước khi chụp. Dọn hết file test (mock JSON, server.py, ảnh png) sau khi xong, chỉ để lại các file HTML thật sẽ giao cho user.
 
 ## Bước 5 — Soạn `data_query_spec` (nếu muốn dữ liệu sống)
@@ -270,7 +193,8 @@ Ràng buộc phải tôn trọng khi soạn (server sẽ từ chối nếu sai):
 - `filters[].op`: chỉ `eq|ne|gt|gte|lt|lte`. `filters[].type`: chỉ `STRING|INT64|FLOAT64|BOOL|DATE|TIMESTAMP` — phải khớp kiểu thật của cột.
 - `order_by[].column`: BẮT BUỘC phải là 1 tên nằm trong `columns` hoặc là 1 `alias` của `aggregations` — không sort được theo cột chưa SELECT.
 - Có cả `columns` và `aggregations` → tự động `GROUP BY` theo `columns`. Chỉ có `aggregations` (không `columns`) → trả về đúng 1 dòng tổng hợp toàn bảng.
-- `limit`: số nguyên dương, tối đa 10000 (mặc định 500 nếu bỏ trống).
+- `limit`: số nguyên dương, tối đa 20000 (mặc định 500 nếu bỏ trống).
+- Mỗi spec bị chặn nếu dry-run ước lượng quét quá 500MB (`EMBED_DATA_MAX_BYTES_BILLED`) — với view nặng, chạy `bq query --dry_run` kiểm tra trước. Các spec chạy song song; kết quả app lưu đệm 15 phút, nút ↻ Làm mới trên dashboard bỏ qua lưu đệm.
 - Không hỗ trợ JOIN/subquery/SQL tự do trong spec — logic phức tạp hơn phải giải quyết bằng cách tạo view ở Bước 2, giữ spec ở đây đơn giản (1 bảng, 1 tầng aggregation).
 
 ### Nhiều bảng trong 1 embed (tối đa 3)
@@ -332,7 +256,7 @@ Trả lời user gồm:
    - Nếu muốn dữ liệu tự cập nhật: bật toggle **"Bật dữ liệu sống"** → chọn chế độ **"📝 Nhập JSON trực tiếp"** → dán đúng khối JSON bạn đưa (hoặc chọn **"🖱️ Chọn bằng dropdown"** để tự bấm chọn bảng/cột/hàm tương đương nếu họ muốn tự chỉnh tay — dropdown chỉ chọn được 1 bảng, spec nhiều bảng (`{"specs": {...}}`) BẮT BUỘC dùng chế độ JSON).
    - Bấm **Upload** → nhận link `/d/{embed_id}` → copy link đó dán thẳng vào Lark (nhúng dạng iframe/embed bình thường, không cần cấu hình gì thêm — đã test thật, hoạt động).
    - Nếu dùng pattern nhiều file (Bước 4): nhắc user upload các file **headless trước**, lấy `embed_id` thật của từng cái, rồi báo lại cho Claude để sửa URL cứng trong file chính trước khi họ upload file chính (hoặc Claude tự đoán trước 1 placeholder rõ ràng và dặn user tìm-thay bằng embed_id thật).
-   - Sau này muốn đổi tên hoặc đổi `data_query_spec` (không đổi giao diện/logic HTML): bấm **"✏️ Sửa"** trong danh sách embed — KHÔNG đổi link. Muốn đổi nội dung/logic file HTML thì phải **"Thu hồi"** rồi upload lại — link sẽ đổi (embed_id mới), nhớ nhắc user cập nhật lại chỗ đã nhúng trong Lark nếu link đổi.
+   - Sau này muốn đổi tên, đổi `data_query_spec`, hoặc thay file HTML (giao diện/logic mới): bấm **"✏️ Sửa"** trong danh sách embed → sửa field cần đổi, hoặc chọn file mới ở ô **"File HTML"** (để trống nếu giữ file cũ) → **Lưu thay đổi** — link KHÔNG đổi, không cần gửi lại hay sửa chỗ đã nhúng trong Lark. Chỉ bấm **"Thu hồi"** khi muốn tắt hẳn link.
 
 Nếu tóm tắt lại toàn bộ hướng dẫn trên thành 1 dòng ngắn gọn kiểu "Cách nhúng: ..." ở cuối câu trả lời, LUÔN viết đầy đủ URL tuyệt đối `https://ai-dashboard-builder-2eodhfgo5a-as.a.run.app/embeds.html` ngay ở bước đầu tiên — TUYỆT ĐỐI không rút gọn thành đường dẫn tương đối kiểu `/embeds.html`, vì user đọc dòng tóm tắt đó cần bấm/copy thẳng được, không tự suy ra domain từ ngữ cảnh. Mẫu:
 
