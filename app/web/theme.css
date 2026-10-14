@@ -1,113 +1,77 @@
-/* Design token + base reset dùng chung cho index.html và embeds.html — 2 trang DUY
-   NHẤT còn dùng file này (preview harness cũ đã xoá từ đợt data-explorer-pivot).
-   Đây là NGUỒN THẬT của bảng màu — sửa ở đây, không copy. */
+/* Design token + base reset dùng chung cho 4 trang app (index/embeds/admin/guide).
+   Đây là NGUỒN THẬT của bảng màu — sửa ở đây, không copy.
+   Giá trị theo chuẩn LSR (skill lsr-report-style mục 7): app đa brand nên accent là
+   xám xanh trung tính, không dùng màu brand HAPAS/MATEMADE. Tên biến giữ như cũ:
+   --series-1 = --primary, --page = --ground, --critical = --bad của skill. */
 
 :root {
   color-scheme: light;
-  --page:            #f0f4f8;
-  --surface:         #ffffff;
-  --surface-2:       #f1eefc;
-  --ink-primary:     #1e293b;
-  --ink-secondary:   #475569;
-  --ink-muted:       #94a3b8;
-  --gridline:        #e1e0d9;
-  --baseline:        #c3c2b7;
-  --series-1:        #7c3aed;
-  --series-2:        #eb6834;
-  --series-3:        #1baf7a;
-  --series-4:        #eda100;
-  --series-5:        #e87ba4;
-  --series-6:        #008300;
-  --series-7:        #4a3aa7;
-  --series-8:        #e34948;
-  --series-9:        #00909e;
-  --series-10:       #8a5a2b;
-  --series-11:       #a03fa0;
-  --series-12:       #66762c;
-  --series-rollup:   #9a988f;
-  --series-1-wash:   rgba(124,58,237,0.10);
-  --good:            #059669;
-  --critical:        #e11d48;
-  --warning-bg:      #fde68a;
-  --warning-ink:     #78350f;
-  --border:          #e2e8f0;
-  --user-bubble:     #ede9fe;
+  --page:            #F5F6F8;
+  --surface:         #FFFFFF;
+  --surface-2:       #EEF0F3;
+  --ink-primary:     #1C2430;
+  --ink-secondary:   #4A5463;
+  --ink-muted:       #616C7B; /* skill ghi #6F7988 (4,4:1) — đậm thêm để đạt 4,5:1 cả trên --surface-2 */
+  --border:          #DDE1E7;
+  --series-1:        #33415C;
+  --series-1-wash:   rgba(51,65,92,0.09);
+  --on-primary:      #FFFFFF; /* chữ trên nền --series-1 */
+  --good:            #0C7D6E; /* skill #0F8B7A chỉ 4,2:1 cho chữ nhỏ */
+  --critical:        #C2413A;
+  --warning-bg:      #F7EBD3;
+  --warning-ink:     #7A4A0E;
+  --user-bubble:     #E6E9EF;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --page:            #131120;
-    --surface:         #1c1a2b;
-    --surface-2:       #262336;
-    --ink-primary:     #f5f3ff;
-    --ink-secondary:   #c4bfe0;
-    --ink-muted:       #8b84ab;
-    --gridline:        #2c2c2a;
-    --baseline:        #383835;
-    --series-1:        #a78bfa;
-    --series-2:        #d95926;
-    --series-3:        #199e70;
-    --series-4:        #c98500;
-    --series-5:        #d55181;
-    --series-6:        #008300;
-    --series-7:        #9085e9;
-    --series-8:        #e66767;
-    --series-9:        #22b3c4;
-    --series-10:       #b5793d;
-    --series-11:       #c563c5;
-    --series-12:       #93a63f;
-    --series-rollup:   #6e6c66;
-    --series-1-wash:   rgba(167,139,250,0.18);
-    --good:            #34d399;
-    --critical:        #fb7185;
-    --warning-bg:      #b45309;
-    --warning-ink:     #fef3c7;
-    --border:          rgba(255,255,255,0.12);
-    --user-bubble:     #2d2650;
+    --page:            #12161C;
+    --surface:         #1A2029;
+    --surface-2:       #232B36;
+    --ink-primary:     #E8ECF2;
+    --ink-secondary:   #BCC4D0;
+    --ink-muted:       #8B95A3;
+    --border:          #2E3744;
+    --series-1:        #C9D2E3;
+    --series-1-wash:   rgba(201,210,227,0.12);
+    --on-primary:      #12161C;
+    --good:            #3FC2AE;
+    --critical:        #EF7A72;
+    --warning-bg:      #3A2E17;
+    --warning-ink:     #E3A948;
+    --user-bubble:     #28324A;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page:            #131120;
-  --surface:         #1c1a2b;
-  --surface-2:       #262336;
-  --ink-primary:     #f5f3ff;
-  --ink-secondary:   #c4bfe0;
-  --ink-muted:       #8b84ab;
-  --gridline:        #2c2c2a;
-  --baseline:        #383835;
-  --series-1:        #a78bfa;
-  --series-2:        #d95926;
-  --series-3:        #199e70;
-  --series-4:        #c98500;
-  --series-5:        #d55181;
-  --series-6:        #008300;
-  --series-7:        #9085e9;
-  --series-8:        #e66767;
-  --series-9:        #22b3c4;
-  --series-10:       #b5793d;
-  --series-11:       #c563c5;
-  --series-12:       #93a63f;
-  --series-rollup:   #6e6c66;
-  --series-1-wash:   rgba(167,139,250,0.18);
-  --good:            #34d399;
-  --critical:        #fb7185;
-  --warning-bg:      #b45309;
-  --warning-ink:     #fef3c7;
-  --border:          rgba(255,255,255,0.12);
-  --user-bubble:     #2d2650;
+  --page:            #12161C;
+  --surface:         #1A2029;
+  --surface-2:       #232B36;
+  --ink-primary:     #E8ECF2;
+  --ink-secondary:   #BCC4D0;
+  --ink-muted:       #8B95A3;
+  --border:          #2E3744;
+  --series-1:        #C9D2E3;
+  --series-1-wash:   rgba(201,210,227,0.12);
+  --on-primary:      #12161C;
+  --good:            #3FC2AE;
+  --critical:        #EF7A72;
+  --warning-bg:      #3A2E17;
+  --warning-ink:     #E3A948;
+  --user-bubble:     #28324A;
 }
 
-/* Chỉ reset trung tính ở đây. Layout của body (flex 2 cột ở app, cuộn dọc ở preview)
-   là việc của từng trang — để ở file dùng chung sẽ ép preview vào layout của app. */
+/* Chỉ reset trung tính ở đây. Layout của body là việc của từng trang. */
 * { box-sizing: border-box; }
 body {
-  font-family: 'DM Sans', system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Be Vietnam Pro có bộ glyph tiếng Việt (DM Sans cũ thì không — chữ ạ/ố/ử phải
+     mượn font hệ thống). Mono (DM Mono) chỉ dùng cho tên bảng/ID/JSON, không cho
+     văn bản tiếng Việt. */
+  font-family: 'Be Vietnam Pro', system-ui, -apple-system, "Segoe UI", sans-serif;
   margin: 0;
   background: var(--page); color: var(--ink-primary);
 }
 
 /* Selector kiểu #id { display: flex } có specificity cao hơn [hidden] nên nuốt mất
-   thuộc tính hidden (đang xảy ra với #filter-row và #dashboard-header: hiện ra cả khi
-   chưa có dashboard nào). !important để hidden luôn thắng. */
+   thuộc tính hidden. !important để hidden luôn thắng. */
 [hidden] { display: none !important; }

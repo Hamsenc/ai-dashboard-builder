@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/theme.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <style>
   html, body { height: 100%; margin: 0; }
   body { display: flex; height: 100vh; overflow: hidden; }
@@ -40,7 +40,7 @@
   }
   .account-cluster { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-secondary); }
   .account-avatar {
-    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: #fff;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: var(--on-primary);
     display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; flex-shrink: 0;
   }
   .account-cluster a { color: var(--series-1); font-weight: 600; text-decoration: none; }
@@ -72,7 +72,7 @@
     border-radius: 999px; padding: 6px 12px; font-size: 12.5px; cursor: pointer;
   }
   .clarify-pill:hover { background: var(--series-1-wash); }
-  .clarify-pill.selected { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+  .clarify-pill.selected { background: var(--series-1); border-color: var(--series-1); color: var(--on-primary); }
   .clarify-extra-row { display: flex; gap: 6px; }
   .clarify-extra-row input {
     flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
@@ -80,7 +80,7 @@
   }
   .clarify-extra-row button {
     padding: 7px 12px; border: none; border-radius: 8px; background: var(--series-1);
-    color: #fff; font-weight: 600; cursor: pointer; font-size: 12.5px; white-space: nowrap;
+    color: var(--on-primary); font-weight: 600; cursor: pointer; font-size: 12.5px; white-space: nowrap;
   }
 
   #input-row { display: flex; padding: 12px 14px; border-top: 1px solid var(--border); gap: 8px; }
@@ -90,7 +90,7 @@
   }
   #input-row button {
     padding: 9px 16px; border: none; border-radius: 8px; background: var(--series-1);
-    color: #fff; font-weight: 600; cursor: pointer; font-size: 13.5px;
+    color: var(--on-primary); font-weight: 600; cursor: pointer; font-size: 13.5px;
   }
   button:disabled, button.is-busy { opacity: 0.6; cursor: default; }
 
@@ -175,7 +175,7 @@
 
   #preview-btn {
     padding: 9px 16px; border: none; border-radius: 8px; background: var(--series-1);
-    color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 6px;
+    color: var(--on-primary); font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 6px;
   }
   #preview-btn:hover { opacity: 0.9; }
   .empty-state { color: var(--ink-muted); font-size: 13.5px; }
@@ -254,7 +254,7 @@
     border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
   .tray-btn:hover { background: var(--surface-2); }
-  .tray-btn.primary { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+  .tray-btn.primary { background: var(--series-1); border-color: var(--series-1); color: var(--on-primary); }
   .tray-btn.primary:hover { opacity: 0.9; }
 </style>
 </head>

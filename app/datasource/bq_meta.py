@@ -8,6 +8,7 @@ luật cứng #1 (chỉ dùng dữ liệu trong whitelist đã cấp quyền).""
 
 from __future__ import annotations
 
+import ast
 import re
 import time
 from typing import Any
@@ -56,8 +57,9 @@ def _fetch_tables_for_dataset(client: bigquery.Client, dataset: str) -> list[dic
     """
     rows = list(client.query(sql).result())
 
-    # __TABLES__ cho row_count/size/last_modified — VIEW không có dòng ở đây nên
-    # trả 0/0/None cho view (frontend hiện "—" thay vì "0 dòng", xem app/web).
+    # __TABLES__ cho row_count/size/last_modified — VIEW vẫn có dòng ở đây nhưng
+    # row_count luôn = 0 (view không lưu dòng), nên ép về None để frontend hiện "—"
+    # thay vì "0 dòng" (ô trống khác 0).
     stats_sql = f"SELECT table_id, row_count, size_bytes, last_modified_time FROM `{project}.{dataset}.__TABLES__`"
     stats_by_name = {r["table_id"]: r for r in client.query(stats_sql).result()}
 
@@ -94,14 +96,17 @@ def _fetch_tables_for_dataset(client: bigquery.Client, dataset: str) -> list[dic
         # last_modified_time trong __TABLES__ là epoch millis (INTEGER), không phải
         # TIMESTAMP — tự quy đổi ở Python, không JOIN thêm 1 câu SQL nữa.
         last_modified_ms = stats["last_modified_time"] if stats else None
+        description = _unquote_option(r["description"])
         tables.append({
             "table_id": f"{project}.{dataset}.{r['table_name']}",
             "project": project,
             "dataset": dataset,
             "table_name": r["table_name"],
             "table_type": r["table_type"],  # "BASE TABLE" | "VIEW"
-            "description": (r["description"] or "").strip(),
-            "row_count": stats["row_count"] if stats else None,
+            "description": description,
+            # Fallback khi catalog Lark không có Purpose (enrich_from_lark ghi đè nếu có).
+            "purpose": _description_label(description, "Mục đích"),
+            "row_count": stats["row_count"] if stats and r["table_type"] != "VIEW" else None,
             "size_bytes": stats["size_bytes"] if stats else None,
             "columns": columns_by_table.get(r["table_name"], []),
             "partition_column": partition_col_by_table.get(r["table_name"]),
@@ -111,6 +116,25 @@ def _fetch_tables_for_dataset(client: bigquery.Client, dataset: str) -> list[dic
             ),
         })
     return tables
+
+
+def _unquote_option(value: str | None) -> str:
+    """option_value của INFORMATION_SCHEMA.TABLE_OPTIONS là LITERAL SQL (bọc ngoặc kép,
+    xuống dòng viết thành \\n), không phải chuỗi thô — không bóc thì UI hiện nguyên
+    '"[Lớp] Serving\\n[Mục đích]...'. Không parse được thì trả nguyên chuỗi."""
+    if not value:
+        return ""
+    try:
+        return str(ast.literal_eval(value)).strip()
+    except (ValueError, SyntaxError):
+        return value.strip()
+
+
+def _description_label(description: str, label: str) -> str:
+    """Lấy nội dung 1 nhãn trong description chuẩn 11 nhãn, vd '[Mục đích] ...' —
+    tới hết dòng/đoạn trước nhãn kế tiếp. Rỗng nếu không có nhãn đó."""
+    m = re.search(rf"\[{re.escape(label)}\]\s*(.*?)(?=\n\s*\[|\Z)", description or "", re.S)
+    return m.group(1).strip() if m else ""
 
 
 def _parse_sentinel_notes(description: str) -> list[dict[str, str]]:
@@ -142,7 +166,7 @@ def enrich_from_lark(tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
         has_lark = t["table_id"] in lark_by_table_id
         lark = lark_by_table_id.get(t["table_id"]) or {}
         merged = dict(t)
-        merged["purpose"] = lark.get("purpose", "")
+        merged["purpose"] = lark.get("purpose") or t.get("purpose", "")
         merged["grain"] = lark.get("grain", "")
         merged["refresh"] = lark.get("refresh", "")
         merged["domain"] = lark.get("domain", "")

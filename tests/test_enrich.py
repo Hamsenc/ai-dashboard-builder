@@ -129,6 +129,24 @@ def test_enrich_catalog_error_returns_original_list_unchanged():
     assert result == RAW_TABLES  # nguyên vẹn, không thêm field, không ném exception
 
 
+def test_unquote_option_and_purpose_label():
+    # Đúng dạng option_value thật của TABLE_OPTIONS: literal có ngoặc kép + \n escape.
+    raw = '"[Lớp] Serving\\n[Mục đích] Doanh thu theo ngày \\"all-channel\\"\\n[Grain] 1 dòng = 1 ngày"'
+    desc = bq_meta._unquote_option(raw)
+    assert desc.startswith("[Lớp] Serving\n[Mục đích]")
+    assert bq_meta._description_label(desc, "Mục đích") == 'Doanh thu theo ngày "all-channel"'
+    assert bq_meta._description_label(desc, "Grain") == "1 dòng = 1 ngày"
+    assert bq_meta._description_label(desc, "Refresh") == ""
+    assert bq_meta._unquote_option("mô tả thô không ngoặc") == "mô tả thô không ngoặc"
+    assert bq_meta._unquote_option(None) == ""
+
+
+def test_enrich_keeps_description_purpose_when_lark_has_none():
+    bq_meta.load_catalog = lambda: {"tables": []}
+    enriched = bq_meta.enrich_from_lark([{**RAW_TABLES[0], "purpose": "Từ description BQ"}])
+    assert enriched[0]["purpose"] == "Từ description BQ"
+
+
 if __name__ == "__main__":
     from _run import run_tests
     run_tests(globals())
