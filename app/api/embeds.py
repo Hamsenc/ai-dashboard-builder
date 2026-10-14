@@ -19,7 +19,7 @@ from auth.deps import get_current_user
 from auth.roles import can_use_embeds, is_admin
 from config import Config
 from datasource import bq_meta
-from embeds import query_spec, template_gen
+from embeds import lark_source, query_spec
 from embeds.gcs_store import upload_bytes, upload_html
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -119,6 +119,19 @@ def _validate_spec(client, spec_dict: dict | None) -> tuple[dict | None, str | N
     return spec_dict, table_id
 
 
+def _validate_lark_sources(sources) -> dict | None:
+    """{tên: link Lark Base} -> validate cú pháp + gọi thử Lark để báo sớm nếu bot
+    chưa được share file. Raise HTTPException 400 nếu sai."""
+    if not sources:
+        return None
+    try:
+        sources = lark_source.validate_sources(sources)
+        lark_source.check_access(sources)
+    except lark_source.LarkSourceError as e:
+        raise HTTPException(400, str(e)) from e
+    return sources
+
+
 def _add_schema_warnings(client, embeds: list[dict]) -> None:
     """Với mỗi embed dùng nguồn BigQuery sống, thử build lại query từ spec đã lưu —
     y hệt việc /d/{id}/data làm lúc viewer mở link (embed_view.py) — để phát hiện
@@ -206,6 +219,7 @@ async def create_embed(
     prompt_note: str | None = Form(default=None),
     group_name: str | None = Form(default=None),
     data_file: UploadFile | None = File(default=None),
+    data_lark_sources: str | None = Form(default=None),
     user: str = Depends(get_current_user),
 ):
     if not can_use_embeds(user):
@@ -226,6 +240,14 @@ async def create_embed(
     # theo schema/scope mới nhất.
     spec_dict, data_table_id = await run_in_threadpool(_validate_spec, client, spec_dict)
 
+    lark_sources = None
+    if data_lark_sources:
+        try:
+            lark_sources = json.loads(data_lark_sources)
+        except json.JSONDecodeError as e:
+            raise HTTPException(400, f"data_lark_sources không phải JSON hợp lệ: {e}") from e
+    lark_sources = await run_in_threadpool(_validate_lark_sources, lark_sources)
+
     embed_id = secrets.token_urlsafe(16)
     gcs_path = f"embeds/{embed_id}.html"
 
@@ -243,64 +265,16 @@ async def create_embed(
         data_file_gcs_path=data_file_gcs_path, data_file_name=data_file_name,
         group_name=(group_name or "").strip() or None,
         data_file_columns=data_file_columns,
+        data_lark_sources=lark_sources,
     )
 
-    return {"embed_id": embed_id, "view_url": f"/d/{embed_id}"}
-
-
-class GenerateEmbedRequest(BaseModel):
-    title: str
-    data_query_spec: dict
-    widgets: list[dict]
-    owner_name: str | None = None
-    prompt_note: str | None = None
-    group_name: str | None = None
-
-
-@router.post("/generate")
-def generate_embed(req: GenerateEmbedRequest, user: str = Depends(get_current_user)):
-    """Tạo embed KHÔNG cần tự viết HTML — server tự lắp dashboard từ 1 data_query_spec
-    (bảng BigQuery + cột/tổng hợp, y hệt spec dùng cho 'dữ liệu sống' thường) và danh
-    sách widget (KPI/Bar/Line/Table, xem embeds/template_gen.py). Chỉ hỗ trợ 1 bảng
-    (không phải {"specs": {...}}) — cần nhiều bảng thì dùng chế độ Upload HTML."""
-    if not can_use_embeds(user):
-        raise HTTPException(403, "Bạn chưa được cấp quyền upload dashboard — liên hệ admin để cấp quyền embed.")
-
-    title = req.title.strip()
-    if not title:
-        raise HTTPException(400, "Tên dashboard không được để trống.")
-
-    client = get_bq_client()
-    if query_spec.is_multi_spec(req.data_query_spec):
-        raise HTTPException(400, "Dashboard mẫu chỉ hỗ trợ 1 bảng dữ liệu — dùng chế độ Upload file HTML nếu cần nhiều bảng.")
-    spec_dict, data_table_id = _validate_spec(client, req.data_query_spec)
-    if spec_dict is None:
-        raise HTTPException(400, "Cần chọn 1 nguồn dữ liệu BigQuery cho dashboard mẫu.")
-
-    available_fields = set(spec_dict.get("columns") or []) | {a["alias"] for a in (spec_dict.get("aggregations") or [])}
-    try:
-        template_gen.validate_widgets(req.widgets, available_fields)
-    except template_gen.InvalidWidgetError as e:
-        raise HTTPException(400, str(e)) from e
-
-    html = template_gen.render_dashboard_html(title, req.widgets)
-
-    embed_id = secrets.token_urlsafe(16)
-    gcs_path = f"embeds/{embed_id}.html"
-    upload_html(gcs_path, html)
-    embeds_store.insert_embed_event(
-        client, embed_id, "created",
-        created_by=user, title=title, gcs_path=gcs_path,
-        data_table_id=data_table_id, data_query_spec=spec_dict,
-        owner_name=req.owner_name, prompt_note=req.prompt_note,
-        group_name=(req.group_name or "").strip() or None,
-    )
     return {"embed_id": embed_id, "view_url": f"/d/{embed_id}"}
 
 
 class UpdateEmbedRequest(BaseModel):
     title: str
     data_query_spec: dict | None = None
+    data_lark_sources: dict | None = None
     owner_name: str | None = None
     prompt_note: str | None = None
     group_name: str | None = None
@@ -322,6 +296,7 @@ def update_embed(embed_id: str, req: UpdateEmbedRequest, user: str = Depends(get
     if not title:
         raise HTTPException(400, "Tên dashboard không được để trống.")
     spec_dict, data_table_id = _validate_spec(client, req.data_query_spec)
+    lark_sources = _validate_lark_sources(req.data_lark_sources)
 
     embeds_store.insert_embed_event(
         client, embed_id, "updated",
@@ -331,9 +306,10 @@ def update_embed(embed_id: str, req: UpdateEmbedRequest, user: str = Depends(get
         data_file_gcs_path=embed.get("data_file_gcs_path"), data_file_name=embed.get("data_file_name"),
         group_name=(req.group_name or "").strip() or None,
         data_file_columns=embed.get("data_file_columns"),
+        data_lark_sources=lark_sources,
     )
     invalidate_cache(embed_id)
-    return {"embed_id": embed_id, "title": title, "data_query_spec": spec_dict}
+    return {"embed_id": embed_id, "title": title, "data_query_spec": spec_dict, "data_lark_sources": lark_sources}
 
 
 @router.post("/{embed_id}/data-file")
@@ -373,6 +349,7 @@ async def update_embed_data_file(embed_id: str, data_file: UploadFile, user: str
         data_file_gcs_path=data_file_gcs_path, data_file_name=data_file_name,
         group_name=embed.get("group_name"),
         data_file_columns=data_file_columns or prev_columns,
+        data_lark_sources=embed.get("data_lark_sources"),
     )
     invalidate_cache(embed_id)
     return {"embed_id": embed_id, "data_file_name": data_file_name, "column_warning": column_warning}
@@ -401,6 +378,7 @@ async def replace_embed_html(embed_id: str, file: UploadFile, user: str = Depend
         data_file_gcs_path=embed.get("data_file_gcs_path"), data_file_name=embed.get("data_file_name"),
         group_name=embed.get("group_name"),
         data_file_columns=embed.get("data_file_columns"),
+        data_lark_sources=embed.get("data_lark_sources"),
     )
     return {"embed_id": embed_id, "view_url": f"/d/{embed_id}"}
 

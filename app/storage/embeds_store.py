@@ -32,6 +32,7 @@ def insert_embed_event(
     data_file_name: str | None = None,
     group_name: str | None = None,
     data_file_columns: list[str] | None = None,
+    data_lark_sources: dict[str, str] | None = None,
 ) -> None:
     row = {
         "embed_id": embed_id,
@@ -47,6 +48,7 @@ def insert_embed_event(
         "data_file_name": data_file_name,
         "group_name": group_name,
         "data_file_columns": json.dumps(data_file_columns, ensure_ascii=False) if data_file_columns else None,
+        "data_lark_sources": json.dumps(data_lark_sources, ensure_ascii=False) if data_lark_sources else None,
         "event_at": _now(),
     }
     table_id = _table("embeds")
@@ -63,9 +65,9 @@ def _row_to_dict(row: bigquery.table.Row) -> dict[str, Any]:
     spec = d.get("data_query_spec")
     if isinstance(spec, str):
         d["data_query_spec"] = json.loads(spec)
-    columns = d.get("data_file_columns")
-    if isinstance(columns, str):
-        d["data_file_columns"] = json.loads(columns)
+    for key in ("data_file_columns", "data_lark_sources"):
+        if isinstance(d.get(key), str):
+            d[key] = json.loads(d[key])
     return d
 
 

@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/theme.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <style>
   html, body { height: 100%; margin: 0; }
   body { display: flex; height: 100vh; overflow: hidden; }
@@ -41,7 +41,7 @@
   }
   .account-cluster { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-secondary); }
   .account-avatar {
-    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: #fff;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: var(--on-primary);
     display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; flex-shrink: 0;
   }
   .account-cluster a { color: var(--series-1); font-weight: 600; text-decoration: none; }
@@ -73,7 +73,7 @@
   .skill-steps li:last-child { margin-bottom: 0; }
   .skill-steps li::before {
     content: counter(step); position: absolute; left: 0; top: 0; width: 20px; height: 20px;
-    background: var(--series-1); color: #fff; border-radius: 50%; font-size: 11px; font-weight: 700;
+    background: var(--series-1); color: var(--on-primary); border-radius: 50%; font-size: 11px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
   }
   .skill-steps strong { color: var(--ink-primary); }
@@ -83,7 +83,7 @@
   .prompt-item-title { font-size: 13px; font-weight: 650; margin-bottom: 6px; }
   .prompt-box {
     background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
-    font-family: 'DM Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.6; white-space: pre-wrap;
+    font-size: 12.5px; line-height: 1.6; white-space: pre-wrap;
     margin-bottom: 8px;
   }
   .copy-btn {
@@ -152,8 +152,8 @@
     <div class="feature-icon">📊</div>
     <div>
       <div class="feature-title">Nhúng dashboard vào Lark</div>
-      <div class="feature-desc">3 cách để có 1 dashboard: tự làm bằng AI riêng của bạn, nhờ Claude Code làm hộ nếu đã
-        có quyền BigQuery, hoặc dùng mẫu có sẵn không cần code — xem 3 cách chi tiết bên dưới. Dù chọn cách nào, bước
+      <div class="feature-desc">2 cách để có 1 dashboard: tự làm bằng AI riêng của bạn, hoặc nhờ Claude Code làm hộ nếu đã
+        có quyền BigQuery — xem 2 cách chi tiết bên dưới. Dù chọn cách nào, bước
         cuối luôn là lấy link chia sẻ ở tab <a href="/embeds.html">📊 Nhúng dashboard vào Lark</a> (cần được cấp quyền
         upload trước).</div>
     </div>
@@ -213,23 +213,6 @@
       (cần đăng nhập Lark của chính bạn) — chỉ cần dán đúng file + JSON cấu hình AI đưa.</li>
   </ol>
   <p style="font-size:11.5px;color:var(--ink-muted);">Không có quyền upload? Vào tab Nhúng dashboard rồi bấm "Yêu cầu cấp quyền".</p>
-</div>
-
-<div class="card">
-  <h2>🧩 Cách 3 — Dùng dashboard mẫu có sẵn (không cần code, nhanh nhất)</h2>
-  <p>Phù hợp khi nhu cầu đơn giản: vài KPI + 1 biểu đồ theo ngày hoặc theo nhóm. App tự lắp dashboard, không cần tự
-    viết HTML hay biết SQL.</p>
-  <ol class="skill-steps">
-    <li><strong>Tìm bảng dữ liệu.</strong> Ở tab <a href="/">🗂️ Tư vấn chọn bảng</a>, mô tả báo cáo muốn làm — bảng phù
-      hợp sẽ được bold và đẩy lên đầu danh sách (không ẩn các bảng khác, vẫn xem được nếu advisor đoán chưa đúng).</li>
-    <li><strong>Chọn "Dashboard mẫu".</strong> Vào tab <a href="/embeds.html">📊 Nhúng dashboard vào Lark</a> → chọn
-      "🧩 Dashboard mẫu (không cần code)".</li>
-    <li><strong>Chọn 1 kiểu dashboard.</strong> Xu hướng theo thời gian (biểu đồ đường theo ngày), So sánh theo nhóm
-      (biểu đồ cột theo brand/kênh...), hoặc Bảng dữ liệu chi tiết (chỉ KPI + bảng).</li>
-    <li><strong>Chọn bảng + chỉ số.</strong> Chọn bảng nguồn, cột muốn chia nhóm (nếu kiểu dashboard cần), rồi thêm
-      từng chỉ số (cột số + cách tính Tổng/Đếm/Trung bình).</li>
-    <li><strong>Bấm "Tạo dashboard"</strong> → copy link <code>/d/{id}</code> hiện ra → dán vào Lark.</li>
-  </ol>
 </div>
 
 </div>

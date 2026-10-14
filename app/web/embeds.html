@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/theme.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=DM+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <style>
   html, body { height: 100%; margin: 0; }
   body { display: flex; height: 100vh; overflow: hidden; }
@@ -41,7 +41,7 @@
   }
   .account-cluster { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-secondary); }
   .account-avatar {
-    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: #fff;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--series-1); color: var(--on-primary);
     display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; flex-shrink: 0;
   }
   .account-cluster a { color: var(--series-1); font-weight: 600; text-decoration: none; }
@@ -71,7 +71,7 @@
 
   .primary-btn {
     padding: 10px 20px; border: none; border-radius: 8px; background: var(--series-1);
-    color: #fff; font-weight: 600; font-size: 13px; cursor: pointer;
+    color: var(--on-primary); font-weight: 600; font-size: 13px; cursor: pointer;
   }
   .primary-btn:hover { opacity: 0.9; }
   .secondary-btn {
@@ -125,18 +125,7 @@
     display: grid; grid-template-columns: 1.3fr 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px;
   }
   .dyn-row.filter-row { grid-template-columns: 1.1fr 0.7fr 1.1fr auto; }
-  .dyn-row.tpl-metric-row { grid-template-columns: 1.2fr 1fr 1.4fr auto; }
 
-  .template-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-  .template-card {
-    border: 1px solid var(--border); border-radius: 12px; padding: 16px; cursor: pointer;
-    background: var(--surface); text-align: left;
-  }
-  .template-card:hover { border-color: var(--series-1); }
-  .template-card.selected { border-color: var(--series-1); background: var(--series-1-wash); }
-  .template-card .tpl-card-icon { font-size: 22px; margin-bottom: 6px; }
-  .template-card .tpl-card-title { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
-  .template-card .tpl-card-desc { font-size: 12px; color: var(--ink-muted); line-height: 1.45; }
   .dyn-row-remove {
     border: none; background: transparent; color: var(--critical); cursor: pointer; font-size: 16px;
     width: 26px; height: 26px; border-radius: 6px; line-height: 1;
@@ -226,20 +215,6 @@
   <div class="edit-banner" id="edit-banner" hidden>
     <span>Đang sửa "<strong id="edit-banner-title"></strong>" — link giữ nguyên, kể cả khi thay file HTML.</span>
     <button type="button" class="link-btn" id="cancel-edit-btn">Hủy sửa</button>
-  </div>
-
-  <div class="field" id="create-mode-field">
-    <label class="field-label">Cách tạo dashboard</label>
-    <div class="mode-tabs">
-      <label class="mode-tab">
-        <input type="radio" name="create-mode" value="upload" checked />
-        📁 Upload file HTML có sẵn
-      </label>
-      <label class="mode-tab">
-        <input type="radio" name="create-mode" value="template" />
-        🧩 Dashboard mẫu (không cần code)
-      </label>
-    </div>
   </div>
 
   <div class="field">
@@ -369,47 +344,17 @@
         <div class="hint" id="data-file-current"></div>
       </div>
     </div>
-  </div>
 
-  <div class="field" id="template-builder" hidden>
-    <label class="field-label">Chọn kiểu dashboard</label>
-    <div class="template-gallery" id="template-gallery"></div>
-
-    <div id="tpl-fields-wrapper" hidden style="margin-top:20px;">
-      <div class="sub-label" style="margin-top:0;">Bảng dữ liệu nguồn</div>
-      <select id="tpl-table">
-        <option value="">— Chọn 1 bảng —</option>
-      </select>
-
-      <div id="tpl-fields" hidden>
-        <div class="sub-label" id="tpl-dimension-label"></div>
-        <select id="tpl-dimension"></select>
-        <p class="hint" id="tpl-dimension-hint" style="margin-top:6px;"></p>
-
-        <div class="sub-label">Các chỉ số muốn xem</div>
-        <div id="tpl-metric-rows"></div>
-        <button type="button" class="secondary-btn" id="tpl-add-metric-btn">+ Thêm chỉ số</button>
-
-        <label class="toggle-row" id="tpl-show-table-row" style="margin-top:16px;">
-          <input type="checkbox" id="tpl-show-table" />
-          <div class="toggle-row-text">
-            <div class="toggle-title">Kèm bảng chi tiết</div>
-            <div class="toggle-desc">Hiện thêm 1 bảng liệt kê số liệu theo từng dòng, bên cạnh các biểu đồ ở trên.</div>
-          </div>
-        </label>
-
-        <details style="margin-top:16px;">
-          <summary class="sub-label" style="cursor:pointer; margin-top:0;">Tùy chọn nâng cao</summary>
-          <div style="margin-top:12px;">
-            <div class="sub-label" style="margin-top:0;">Lọc dữ liệu (tùy chọn)</div>
-            <div id="tpl-filter-rows"></div>
-            <button type="button" class="secondary-btn" id="tpl-add-filter-btn">+ Thêm điều kiện lọc</button>
-
-            <div class="sub-label">Giới hạn số dòng trả về</div>
-            <input type="number" id="tpl-limit" class="limit-row" value="500" min="1" max="20000" />
-          </div>
-        </details>
-      </div>
+    <div class="sub-label">📋 Thêm bảng Lark Base (tùy chọn — dùng được cùng lúc với BigQuery/File ở trên)</div>
+    <div id="lark-data-panel" class="live-data-panel">
+      <p class="hint" style="margin-top:0;">
+        Để trống nếu không dùng. Mở đúng bảng trong Lark Base, copy link trên thanh địa chỉ. Mỗi dòng 1 bảng, dạng
+        <code>tên | link</code> (tên chỉ chữ/số/gạch dưới, tối đa 5 bảng). Mỗi file Base phải được
+        <strong>share cho bot "Bùi Trường Linh"</strong>, nếu không sẽ báo lỗi lúc lưu.
+        Trong file HTML gọi <code>fetch('lark-data')</code> để lấy <code>{tên: {columns, rows}}</code>;
+        nếu link có <code>view=</code> thì chỉ lấy dữ liệu theo bộ lọc của view đó.
+      </p>
+      <textarea id="f-lark-sources" placeholder="ngay | https://xxx.sg.larksuite.com/base/ANwJ...?table=tbl...&view=vew..."></textarea>
     </div>
   </div>
 
@@ -510,8 +455,7 @@ async function ensureTablesLoaded() {
   }
 }
 
-// Lắp <optgroup>/<option> từ tablesData vào 1 <select> — dùng chung cho picker "Dữ liệu
-// sống" (#spec-table) lẫn picker "Dashboard mẫu" (#tpl-table), mỗi select chỉ lắp 1 lần.
+// Lắp <optgroup>/<option> từ tablesData vào picker "Dữ liệu sống" (#spec-table), chỉ lắp 1 lần.
 function populateTableSelect(selectEl) {
   if (selectEl.dataset.populated) return;
   selectEl.dataset.populated = '1';
@@ -546,32 +490,6 @@ async function applyDataModeVisibility() {
 
 document.querySelectorAll('input[name="data-mode"]').forEach(radio => {
   radio.addEventListener('change', applyDataModeVisibility);
-});
-
-/* ============================== Toggle "Cách tạo dashboard" (upload vs mẫu) ============================== */
-
-function currentCreateMode() {
-  return document.querySelector('input[name="create-mode"]:checked').value;
-}
-
-async function applyCreateModeVisibility() {
-  const isTemplate = currentCreateMode() === 'template';
-  document.getElementById('file-field').hidden = isTemplate;
-  document.getElementById('data-source-field').hidden = isTemplate;
-  document.getElementById('template-builder').hidden = !isTemplate;
-  if (isTemplate) {
-    if (!document.getElementById('template-gallery').children.length) renderTemplateGallery();
-    await ensureTablesLoaded();
-    populateTableSelect(document.getElementById('tpl-table'));
-  }
-  if (!editingEmbedId) {
-    document.getElementById('form-title-label').textContent = isTemplate ? 'Tạo dashboard mẫu mới' : 'Upload dashboard mới';
-    document.getElementById('upload-btn').textContent = isTemplate ? 'Tạo dashboard' : 'Upload';
-  }
-}
-
-document.querySelectorAll('input[name="create-mode"]').forEach(radio => {
-  radio.addEventListener('change', applyCreateModeVisibility);
 });
 
 function selectTable(tableId) {
@@ -691,224 +609,6 @@ function refreshOrderByOptions() {
     names.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n}</option>`).join('');
 }
 
-/* ============================== "Dashboard mẫu" — chọn 1 template cố định + chỉ điền data ============================== */
-// Cố tình KHÔNG dùng chung state/markup với picker "Dữ liệu sống" ở trên (selectedTable,
-// #spec-table...) — 2 picker phục vụ 2 đối tượng khác nhau. Bản đầu tiên của tính năng này
-// để user tự chọn loại biểu đồ cho từng chỉ số (KPI/cột/đường) — user feedback: "rối, không
-// biết phải làm sao". Sửa lại theo hướng "kho template cố định": user chỉ chọn 1 template có
-// sẵn (đã quyết định sẵn loại biểu đồ/bố cục) rồi điền đúng cột dữ liệu của họ vào, không phải
-// tự quyết định biểu đồ nào hợp với cái gì.
-
-const DASHBOARD_TEMPLATES = [
-  {
-    id: 'time_series', icon: '📈', name: 'Xu hướng theo thời gian',
-    desc: 'Theo dõi số liệu biến động qua các ngày/tháng — VD: doanh thu theo ngày.',
-    dimensionLabel: 'Cột ngày/thời gian', dimensionRequired: true,
-    dimensionHint: 'Chọn cột kiểu ngày, VD: date, order_date...',
-    dimensionTypes: ['DATE', 'DATETIME', 'TIMESTAMP'],
-    chartType: 'line', orderDirection: 'asc', orderByDimension: true, forceTable: false,
-  },
-  {
-    id: 'breakdown', icon: '📊', name: 'So sánh theo nhóm',
-    desc: 'So sánh số liệu giữa các nhóm — VD: theo brand, theo kênh bán, theo kho.',
-    dimensionLabel: 'Cột nhóm để so sánh', dimensionRequired: true,
-    dimensionHint: 'Chọn cột kiểu chữ, VD: brand_id, channel_key...',
-    dimensionTypes: ['STRING', 'BOOL'],
-    chartType: 'bar', orderDirection: 'desc', orderByDimension: false, forceTable: false,
-  },
-  {
-    id: 'table_only', icon: '📋', name: 'Bảng dữ liệu chi tiết',
-    desc: 'Chỉ cần bảng số liệu + vài số tổng quan, không cần vẽ biểu đồ.',
-    dimensionLabel: 'Cột nhóm theo (tùy chọn)', dimensionRequired: false,
-    dimensionHint: 'Để trống nếu chỉ cần vài số tổng chung, không chia nhóm.',
-    dimensionTypes: null,
-    chartType: null, orderDirection: 'desc', orderByDimension: false, forceTable: true,
-  },
-];
-const _TPL_NUMERIC_TYPES = ['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC'];
-const TPL_FN_LABELS = { SUM: 'Tổng (SUM)', COUNT: 'Đếm (COUNT)', AVG: 'Trung bình (AVG)' };
-const TPL_FN_SHORT = { SUM: 'Tổng', COUNT: 'Số lượng', AVG: 'Trung bình' };
-
-// Tên cột kiểu snake_case (VD: net_revenue_success) nhìn kỹ thuật/xấu khi để thẳng làm tiêu
-// đề hiển thị cho người không rành SQL — chỉ đổi dấu gạch dưới thành khoảng trắng, không đoán
-// case chữ hoa/thường (tránh đoán sai viết tắt như GMV/SKU).
-function prettifyColumnLabel(col) {
-  return col.replace(/_/g, ' ');
-}
-
-let selectedTemplateId = null;
-let selectedTemplateTable = null;
-let tplMetricRowCount = 0;
-
-function currentTemplate() {
-  return DASHBOARD_TEMPLATES.find(t => t.id === selectedTemplateId) || null;
-}
-
-function renderTemplateGallery() {
-  const gallery = document.getElementById('template-gallery');
-  gallery.innerHTML = '';
-  DASHBOARD_TEMPLATES.forEach(tpl => {
-    const card = document.createElement('button');
-    card.type = 'button';
-    card.className = 'template-card';
-    card.dataset.id = tpl.id;
-    card.innerHTML = `<div class="tpl-card-icon">${tpl.icon}</div>`
-      + `<div class="tpl-card-title">${tpl.name}</div>`
-      + `<div class="tpl-card-desc">${tpl.desc}</div>`;
-    card.onclick = () => selectDashboardTemplate(tpl.id);
-    gallery.appendChild(card);
-  });
-}
-
-async function selectDashboardTemplate(id) {
-  selectedTemplateId = id;
-  const tpl = currentTemplate();
-  document.querySelectorAll('.template-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
-  document.getElementById('tpl-fields-wrapper').hidden = false;
-  document.getElementById('tpl-dimension-label').textContent = tpl.dimensionLabel;
-  document.getElementById('tpl-dimension-hint').textContent = tpl.dimensionHint;
-  document.getElementById('tpl-show-table-row').hidden = tpl.forceTable;
-  if (selectedTemplateTable) renderTplDimensionOptions();
-  await ensureTablesLoaded();
-  populateTableSelect(document.getElementById('tpl-table'));
-}
-
-function tplNumericColumnOptionsHtml() {
-  return (selectedTemplateTable.columns || [])
-    .filter(c => _TPL_NUMERIC_TYPES.includes(c.type))
-    .map(c => `<option value="${c.name}">${c.name}</option>`)
-    .join('');
-}
-
-function renderTplDimensionOptions() {
-  const tpl = currentTemplate();
-  const allCols = selectedTemplateTable.columns || [];
-  const matching = tpl.dimensionTypes ? allCols.filter(c => tpl.dimensionTypes.includes(c.type)) : allCols;
-  const cols = matching.length ? matching : allCols; // không có cột đúng kiểu mong đợi -> vẫn cho chọn hết, còn hơn chặn cứng
-  const placeholder = tpl.dimensionRequired ? '— Chọn 1 cột —' : '— Không chia nhóm, chỉ xem 1 tổng chung —';
-  const sel = document.getElementById('tpl-dimension');
-  sel.innerHTML = `<option value="">${placeholder}</option>` + cols.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-}
-
-function selectTemplateTable(tableId) {
-  selectedTemplateTable = tablesData.find(t => t.table_id === tableId) || null;
-  document.getElementById('tpl-fields').hidden = !selectedTemplateTable;
-  document.getElementById('tpl-metric-rows').innerHTML = '';
-  document.getElementById('tpl-filter-rows').innerHTML = '';
-  tplMetricRowCount = 0;
-  if (!selectedTemplateTable) return;
-  renderTplDimensionOptions();
-  addMetricRow();
-}
-document.getElementById('tpl-table').addEventListener('change', e => selectTemplateTable(e.target.value));
-
-function addMetricRow() {
-  const idx = tplMetricRowCount++;
-  const row = document.createElement('div');
-  row.className = 'dyn-row tpl-metric-row';
-  row.dataset.idx = idx;
-  const numericOptions = tplNumericColumnOptionsHtml();
-  row.innerHTML = `
-    <select class="tpl-metric-column">${numericOptions}</select>
-    <select class="tpl-metric-fn">${Object.entries(TPL_FN_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
-    <input type="text" class="tpl-metric-title" placeholder="Tiêu đề hiển thị" />
-    <button type="button" class="dyn-row-remove" title="Xóa">×</button>
-  `;
-  const titleInput = row.querySelector('.tpl-metric-title');
-  const updateTitle = () => {
-    if (titleInput.dataset.userEdited) return;
-    const col = row.querySelector('.tpl-metric-column').value;
-    const fn = row.querySelector('.tpl-metric-fn').value;
-    titleInput.value = col ? `${TPL_FN_SHORT[fn]} ${prettifyColumnLabel(col)}` : '';
-  };
-  row.querySelector('.tpl-metric-column').addEventListener('change', updateTitle);
-  row.querySelector('.tpl-metric-fn').addEventListener('change', updateTitle);
-  titleInput.addEventListener('input', () => { titleInput.dataset.userEdited = '1'; });
-  row.querySelector('.dyn-row-remove').addEventListener('click', () => row.remove());
-  document.getElementById('tpl-metric-rows').appendChild(row);
-  updateTitle();
-}
-document.getElementById('tpl-add-metric-btn').addEventListener('click', () => {
-  if (!selectedTemplateTable) { alert('Chọn bảng dữ liệu nguồn trước.'); return; }
-  if (!tplNumericColumnOptionsHtml()) { alert('Bảng này không có cột số (INT64/FLOAT64/NUMERIC) để tính toán.'); return; }
-  addMetricRow();
-});
-
-function addTplFilterRow() {
-  const row = document.createElement('div');
-  row.className = 'dyn-row filter-row';
-  row.innerHTML = `
-    <select class="tpl-filter-column">${(selectedTemplateTable.columns || []).map(c => `<option value="${c.name}">${c.name} (${c.type})</option>`).join('')}</select>
-    <select class="tpl-filter-op">${Object.entries(FILTER_OP_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
-    <span class="tpl-filter-value-slot"></span>
-    <button type="button" class="dyn-row-remove" title="Xóa">×</button>
-  `;
-  const renderValueInput = () => {
-    const colName = row.querySelector('.tpl-filter-column').value;
-    const col = (selectedTemplateTable.columns || []).find(c => c.name === colName);
-    const bqType = col ? col.type : 'STRING';
-    const slot = row.querySelector('.tpl-filter-value-slot');
-    slot.innerHTML = '';
-    const input = document.createElement('input');
-    input.type = bqTypeToInputType(bqType);
-    input.className = 'tpl-filter-value';
-    input.placeholder = 'giá trị';
-    input.dataset.bqType = bqType;
-    slot.appendChild(input);
-  };
-  row.querySelector('.tpl-filter-column').addEventListener('change', renderValueInput);
-  row.querySelector('.dyn-row-remove').addEventListener('click', () => row.remove());
-  document.getElementById('tpl-filter-rows').appendChild(row);
-  renderValueInput();
-}
-document.getElementById('tpl-add-filter-btn').addEventListener('click', () => {
-  if (!selectedTemplateTable) { alert('Chọn bảng dữ liệu nguồn trước.'); return; }
-  addTplFilterRow();
-});
-
-function buildSpecAndWidgetsFromTemplateForm() {
-  const tpl = currentTemplate();
-  const dimension = document.getElementById('tpl-dimension').value;
-  const aggregations = [];
-  const widgets = [];
-  const usedAliases = new Set();
-  Array.from(document.querySelectorAll('#tpl-metric-rows .tpl-metric-row')).forEach(row => {
-    const column = row.querySelector('.tpl-metric-column').value;
-    const fn = row.querySelector('.tpl-metric-fn').value;
-    let alias = `${fn.toLowerCase()}_${column}`;
-    let n = 2;
-    while (usedAliases.has(alias)) alias = `${fn.toLowerCase()}_${column}_${n++}`;
-    usedAliases.add(alias);
-    aggregations.push({ column, fn, alias });
-    const title = row.querySelector('.tpl-metric-title').value.trim() || `${TPL_FN_SHORT[fn]} ${prettifyColumnLabel(column)}`;
-    widgets.push({ type: 'kpi', title, value_column: alias, agg: fn.toLowerCase() });
-    if (tpl.chartType) widgets.push({ type: tpl.chartType, title, label_column: dimension, value_column: alias });
-  });
-  const filters = Array.from(document.querySelectorAll('#tpl-filter-rows .dyn-row')).map(row => {
-    const valueInput = row.querySelector('.tpl-filter-value');
-    let value = valueInput.value;
-    const bqType = valueInput.dataset.bqType;
-    if (_TPL_NUMERIC_TYPES.includes(bqType)) value = Number(value);
-    return { column: row.querySelector('.tpl-filter-column').value, op: row.querySelector('.tpl-filter-op').value, value, type: bqType };
-  });
-  const spec = {
-    table_id: selectedTemplateTable.table_id,
-    columns: dimension ? [dimension] : [],
-    aggregations,
-    limit: parseInt(document.getElementById('tpl-limit').value, 10) || 500,
-  };
-  if (filters.length) spec.filters = filters;
-  if (dimension) {
-    // time_series: sắp theo đúng cột ngày (chronological) — sắp theo giá trị chỉ số
-    // (như breakdown) sẽ làm biểu đồ đường nối các điểm theo thứ tự ngẫu nhiên, nhìn
-    // như zigzag vô nghĩa. breakdown/table_only: sắp theo chỉ số đầu tiên, nhóm to nhất lên trước.
-    const orderColumn = tpl.orderByDimension ? dimension : (aggregations[0] && aggregations[0].alias);
-    if (orderColumn) spec.order_by = [{ column: orderColumn, direction: tpl.orderDirection }];
-  }
-  if (tpl.forceTable || document.getElementById('tpl-show-table').checked) widgets.push({ type: 'table', title: 'Bảng chi tiết' });
-  return { spec, widgets };
-}
-
 function buildSpecFromForm() {
   if (!selectedTable) return null;
   const columns = getSelectedColumnNames();
@@ -961,6 +661,7 @@ function resetLiveDataFields() {
   document.querySelector('input[name="data-mode"][value="none"]').checked = true;
   document.getElementById('bigquery-data-panel').hidden = true;
   document.getElementById('datafile-data-panel').hidden = true;
+  document.getElementById('f-lark-sources').value = '';
   document.getElementById('f-data-file').value = '';
   document.getElementById('data-file-current').textContent = '';
 
@@ -974,18 +675,6 @@ function resetLiveDataFields() {
   document.querySelector('input[name="spec-mode"][value="picker"]').checked = true;
   document.getElementById('picker-mode').hidden = false;
   document.getElementById('json-mode').hidden = true;
-
-  selectedTemplateId = null;
-  document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('tpl-fields-wrapper').hidden = true;
-  document.getElementById('tpl-table').value = '';
-  document.getElementById('tpl-fields').hidden = true;
-  selectedTemplateTable = null;
-  document.getElementById('tpl-metric-rows').innerHTML = '';
-  document.getElementById('tpl-filter-rows').innerHTML = '';
-  tplMetricRowCount = 0;
-  document.getElementById('tpl-show-table').checked = false;
-  document.getElementById('tpl-limit').value = 500;
 }
 
 async function loadSpecIntoPicker(spec) {
@@ -1009,9 +698,6 @@ async function loadSpecIntoPicker(spec) {
 
 async function enterEditMode(embed) {
   editingEmbedId = embed.embed_id;
-  document.getElementById('create-mode-field').hidden = true;
-  document.querySelector('input[name="create-mode"][value="upload"]').checked = true;
-  applyCreateModeVisibility();
   document.getElementById('form-title-label').textContent = 'Sửa dashboard';
   document.getElementById('f-file').value = '';
   clearFilePreview();
@@ -1047,13 +733,16 @@ async function enterEditMode(embed) {
       `Đang dùng: ${embed.data_file_name || '(không rõ tên file)'} — chọn file mới bên dưới để thay, hoặc để trống nếu không đổi.`;
   }
 
+  if (embed.data_lark_sources) {
+    document.getElementById('f-lark-sources').value =
+      Object.entries(embed.data_lark_sources).map(([name, url]) => `${name} | ${url}`).join('\n');
+  }
+
   document.querySelector('.card').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
 function exitEditMode() {
   editingEmbedId = null;
-  document.getElementById('create-mode-field').hidden = false;
-  document.querySelector('input[name="create-mode"][value="upload"]').checked = true;
   document.getElementById('file-field').hidden = false;
   document.getElementById('file-edit-hint').hidden = true;
   document.getElementById('edit-banner').hidden = true;
@@ -1064,7 +753,8 @@ function exitEditMode() {
   document.getElementById('f-file').value = '';
   resetLiveDataFields();
   clearFilePreview();
-  applyCreateModeVisibility();
+  document.getElementById('form-title-label').textContent = 'Upload dashboard mới';
+  document.getElementById('upload-btn').textContent = 'Upload';
 }
 
 let filePreviewUrl = null;
@@ -1187,6 +877,12 @@ function renderEmbedCard(embed) {
     badge.textContent = 'File dữ liệu';
     title.appendChild(badge);
   }
+  if (embed.data_lark_sources) {
+    const badge = document.createElement('span');
+    badge.className = 'live-badge';
+    badge.textContent = 'Dữ liệu sống (Lark Base)';
+    title.appendChild(badge);
+  }
   if (embed.schema_warning) {
     const badge = document.createElement('span');
     badge.className = 'warn-badge';
@@ -1290,12 +986,18 @@ function renderEmbedDetails(container, embed, canManageShares) {
     dataLabel.textContent = 'Bảng BigQuery: ';
     dataLine.appendChild(dataLabel);
     dataLine.appendChild(document.createTextNode(query_spec_summary(embed.data_query_spec))); // untrusted content -> textContent
-  } else {
+  } else if (!embed.data_lark_sources) {
     dataLabel.textContent = 'Nguồn dữ liệu: ';
     dataLine.appendChild(dataLabel);
     dataLine.appendChild(document.createTextNode('không có (dashboard tĩnh).'));
   }
   container.appendChild(dataLine);
+  if (embed.data_lark_sources) {
+    const larkLine = document.createElement('div');
+    larkLine.innerHTML = '<strong>Lark Base: </strong>';
+    larkLine.appendChild(document.createTextNode(Object.keys(embed.data_lark_sources).join(', '))); // untrusted content -> textContent
+    container.appendChild(larkLine);
+  }
   if (embed.schema_warning) {
     const warn = document.createElement('div');
     warn.className = 'warn-note';
@@ -1444,28 +1146,6 @@ document.getElementById('upload-btn').onclick = async () => {
 
   if (!title) { errorEl.hidden = false; errorEl.textContent = 'Cần nhập tên dashboard.'; return; }
 
-  if (!editingEmbedId && currentCreateMode() === 'template') {
-    const tpl = currentTemplate();
-    if (!tpl) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn 1 kiểu dashboard trước.'; return; }
-    if (!selectedTemplateTable) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn bảng dữ liệu nguồn.'; return; }
-    const metricRows = document.querySelectorAll('#tpl-metric-rows .tpl-metric-row');
-    if (!metricRows.length) { errorEl.hidden = false; errorEl.textContent = 'Cần thêm ít nhất 1 chỉ số.'; return; }
-    for (const row of metricRows) {
-      if (!row.querySelector('.tpl-metric-column').value) {
-        errorEl.hidden = false; errorEl.textContent = 'Bảng này không có cột số để tính toán — hãy dùng chế độ Upload file HTML.';
-        return;
-      }
-    }
-    const dimension = document.getElementById('tpl-dimension').value;
-    if (tpl.dimensionRequired && !dimension) {
-      errorEl.hidden = false; errorEl.textContent = `Cần chọn "${tpl.dimensionLabel}" cho kiểu dashboard này.`;
-      return;
-    }
-    const { spec, widgets } = buildSpecAndWidgetsFromTemplateForm();
-    await submitGenerate(title, ownerName, promptNote, groupName, spec, widgets, btn, resultEl);
-    return;
-  }
-
   if (!editingEmbedId && !fileInput.files[0]) { errorEl.hidden = false; errorEl.textContent = 'Cần chọn 1 file HTML.'; return; }
   if (!editingEmbedId && dataMode === 'datafile' && !dataFileInput.files[0]) {
     errorEl.hidden = false; errorEl.textContent = 'Cần chọn file dữ liệu (.xlsx/.xls/.csv).'; return;
@@ -1497,10 +1177,22 @@ document.getElementById('upload-btn').onclick = async () => {
 
   const dataFile = dataMode === 'datafile' ? dataFileInput.files[0] : null;
 
+  let larkSources = null;
+  const larkLines = document.getElementById('f-lark-sources').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (larkLines.length) {
+    const lines = larkLines;
+    larkSources = {};
+    for (const line of lines) {
+      const sep = line.indexOf('|');
+      if (sep < 0) { errorEl.hidden = false; errorEl.textContent = `Dòng "${line}" thiếu dạng "tên | link".`; return; }
+      larkSources[line.slice(0, sep).trim()] = line.slice(sep + 1).trim();
+    }
+  }
+
   if (editingEmbedId) {
-    await saveEdit(editingEmbedId, title, ownerName, promptNote, groupName, specObj, dataFile, fileInput.files[0] || null, btn, resultEl);
+    await saveEdit(editingEmbedId, title, ownerName, promptNote, groupName, specObj, dataFile, fileInput.files[0] || null, btn, resultEl, larkSources);
   } else {
-    await submitCreate(title, ownerName, promptNote, groupName, fileInput, specObj, dataFile, btn, resultEl);
+    await submitCreate(title, ownerName, promptNote, groupName, fileInput, specObj, dataFile, btn, resultEl, larkSources);
   }
 };
 
@@ -1523,38 +1215,7 @@ function showUploadSuccess(resultEl, viewUrl, labelText) {
   resultEl.appendChild(row);
 }
 
-async function submitGenerate(title, ownerName, promptNote, groupName, spec, widgets, btn, resultEl) {
-  setButtonBusy(btn, 'Đang tạo...');
-  try {
-    const data = await apiFetch('/api/embeds/generate', {
-      method: 'POST',
-      body: JSON.stringify({
-        title, data_query_spec: spec, widgets,
-        owner_name: ownerName || null, prompt_note: promptNote || null, group_name: groupName || null,
-      }),
-    });
-    showUploadSuccess(resultEl, data.view_url, '✅ Đã tạo dashboard! Link nhúng vào Lark:');
-
-    document.getElementById('f-title').value = '';
-    document.getElementById('f-owner-name').value = '';
-    document.getElementById('f-prompt-note').value = '';
-    resetLiveDataFields();
-
-    // Cập nhật lạc quan, cùng lý do với submitCreate() bên dưới (độ trễ streaming insert).
-    cachedEmbeds = [{
-      embed_id: data.embed_id, title, created_by: devUser, owner_name: ownerName, prompt_note: promptNote,
-      event_at: new Date().toISOString(), data_query_spec: spec,
-    }, ...cachedEmbeds];
-    renderEmbeds(cachedEmbeds);
-  } catch (e) {
-    resultEl.className = 'error';
-    resultEl.textContent = 'Lỗi tạo dashboard: ' + e.message;
-  } finally {
-    clearButtonBusy(btn);
-  }
-}
-
-async function submitCreate(title, ownerName, promptNote, groupName, fileInput, specObj, dataFile, btn, resultEl) {
+async function submitCreate(title, ownerName, promptNote, groupName, fileInput, specObj, dataFile, btn, resultEl, larkSources) {
   const formData = new FormData();
   formData.append('title', title);
   formData.append('file', fileInput.files[0]);
@@ -1563,6 +1224,7 @@ async function submitCreate(title, ownerName, promptNote, groupName, fileInput, 
   if (groupName) formData.append('group_name', groupName);
   if (specObj) formData.append('data_query_spec', JSON.stringify(specObj));
   if (dataFile) formData.append('data_file', dataFile);
+  if (larkSources) formData.append('data_lark_sources', JSON.stringify(larkSources));
 
   setButtonBusy(btn, 'Đang upload...');
   try {
@@ -1592,6 +1254,7 @@ async function submitCreate(title, ownerName, promptNote, groupName, fileInput, 
       embed_id: data.embed_id, title, created_by: devUser, owner_name: ownerName, prompt_note: promptNote,
       event_at: new Date().toISOString(), data_query_spec: specObj,
       data_file_gcs_path: dataFile ? 'pending' : null, data_file_name: dataFile ? dataFile.name : null,
+      data_lark_sources: larkSources,
     }, ...cachedEmbeds];
     renderEmbeds(cachedEmbeds);
   } catch (e) {
@@ -1618,11 +1281,11 @@ async function postEmbedFile(embedId, path, field, file, failPrefix) {
   return res.json();
 }
 
-async function saveEdit(embedId, title, ownerName, promptNote, groupName, specObj, dataFile, htmlFile, btn, resultEl) {
+async function saveEdit(embedId, title, ownerName, promptNote, groupName, specObj, dataFile, htmlFile, btn, resultEl, larkSources) {
   setButtonBusy(btn, 'Đang lưu...');
   try {
     const updated = await apiFetch(`/api/embeds/${encodeURIComponent(embedId)}`, {
-      method: 'POST', body: JSON.stringify({title, data_query_spec: specObj, owner_name: ownerName, prompt_note: promptNote, group_name: groupName}),
+      method: 'POST', body: JSON.stringify({title, data_query_spec: specObj, data_lark_sources: larkSources, owner_name: ownerName, prompt_note: promptNote, group_name: groupName}),
     });
     let dataFileName = cachedEmbeds.find(e => e.embed_id === embedId)?.data_file_name || null;
     if (htmlFile) {
@@ -1634,7 +1297,7 @@ async function saveEdit(embedId, title, ownerName, promptNote, groupName, specOb
       var columnWarning = fileResult.column_warning || null;
     }
     cachedEmbeds = cachedEmbeds.map(e => e.embed_id === embedId
-      ? {...e, title: updated.title, data_query_spec: updated.data_query_spec,
+      ? {...e, title: updated.title, data_query_spec: updated.data_query_spec, data_lark_sources: updated.data_lark_sources,
          owner_name: ownerName, prompt_note: promptNote, group_name: groupName || null,
          data_file_name: dataFileName, data_file_gcs_path: dataFileName ? (e.data_file_gcs_path || 'pending') : null}
       : e);

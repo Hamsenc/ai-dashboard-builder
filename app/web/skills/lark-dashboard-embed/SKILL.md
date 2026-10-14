@@ -245,6 +245,28 @@ Giao cho user: đưa file HTML, dặn khi upload ở `/embeds.html` chọn chế
 này cần cập nhật số liệu, họ chỉ cần bấm "✏️ Sửa" → chọn lại file dữ liệu mới ở đúng ô đó →
 Lưu — link không đổi.
 
+## Bước 5c — Dữ liệu sống từ Lark Base
+
+Dùng khi dữ liệu nằm trong 1 (hoặc nhiều, tối đa 5) bảng Lark Base mà team tự nhập tay. Server
+đọc thẳng Base bằng bot **"Bùi Trường Linh - Data Assistant"**, mỗi file Base phải được share
+cho bot này trước. Cache 15 phút, nút "↻ Làm mới" tự có.
+
+```js
+fetch('lark-data')                       // -> {tên: {columns, rows}}, tên do user đặt lúc upload
+  .then(r => r.json())
+  .then(data => renderDashboard(data.ngay.rows));
+```
+
+Giá trị đã được chuẩn hoá: số là number, ngày là chuỗi `'YYYY-MM-DD'` (hoặc
+`'YYYY-MM-DD HH:MM:SS'` nếu có giờ, theo giờ VN), select/text/formula dạng chữ ra string, ô
+trống ra `null`. Tên cột giữ nguyên y hệt tên field trong Base (kể cả emoji như `⬜ Ngày`), nên
+truy cập bằng `row['⬜ Ngày']`. Xem tên field thật bằng MCP `base_record_list` trước khi viết HTML.
+
+Dùng được CÙNG LÚC với `data_query_spec` BigQuery trong 1 dashboard: HTML gọi cả `fetch('data')` lẫn `fetch('lark-data')`.
+
+Giao cho user: dặn khi upload điền ô **"📋 Thêm bảng Lark Base"** (nằm riêng dưới 4 ô chọn nguồn, không thay thế BigQuery), mỗi dòng dán `tên | link bảng` (link copy
+trên thanh địa chỉ khi đang mở đúng bảng; có `view=` thì chỉ lấy theo bộ lọc của view đó).
+
 ## Bước 6 — Giao sản phẩm cho user
 
 Trả lời user gồm:

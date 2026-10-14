@@ -15,7 +15,7 @@ from api.catalog import get_bq_client
 from config import Config
 from datasource import bq_meta
 from datasource.preview import _serialize_value
-from embeds import query_spec
+from embeds import lark_source, query_spec
 from embeds.gcs_store import download_bytes, download_html
 from execution import bq_client
 from fastapi import APIRouter, HTTPException, Response
@@ -46,7 +46,7 @@ def _toolbar_html(embed_id: str, embed: dict[str, Any]) -> str:
     không đăng nhập/không có quyền sửa thì nhận 401/403 y hệt gọi API trực tiếp,
     không mở thêm lỗ hổng nào so với trước (embed_id vẫn phải biết để gọi được)."""
     buttons = []
-    if embed.get("data_query_spec"):
+    if embed.get("data_query_spec") or embed.get("data_lark_sources"):
         buttons.append('<button type="button" id="__ldbRefresh">↻ Làm mới</button>')
     if embed.get("data_file_gcs_path"):
         buttons.append(
@@ -61,7 +61,7 @@ def _toolbar_html(embed_id: str, embed: dict[str, Any]) -> str:
 </div>
 <style>
 #__ldbToolbar button {{ border:none;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:700;
-  background:#ede9fe;color:#7c3aed;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12); }}
+  background:#E6E9EF;color:#33415C;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12); }}
 #__ldbToolbar button:hover {{ opacity:.85; }}
 #__ldbToolbar button:disabled {{ opacity:.6;cursor:default; }}
 </style>
@@ -172,6 +172,7 @@ def invalidate_cache(embed_id: str) -> None:
     khác vẫn có thể trả cache cũ tới khi tự hết EMBED_DATA_CACHE_TTL_SECONDS (chấp
     nhận được, không phải ranh giới bảo mật, chỉ ảnh hưởng độ mới của số liệu)."""
     _data_cache.pop(embed_id, None)
+    _data_cache.pop(f"{embed_id}:lark", None)
 
 
 def _run_plan(client, plan: query_spec.QueryPlan) -> dict[str, Any]:
@@ -224,4 +225,33 @@ def get_embed_data(embed_id: str):
         raise HTTPException(400, str(e)) from e
 
     _data_cache[embed_id] = {"loaded_at": now, "result": payload}
+    return payload
+
+
+@router.get("/{embed_id}/lark-data")
+def get_embed_lark_data(embed_id: str):
+    """Dữ liệu sống từ Lark Base -> {tên: {columns, rows}} (cùng shape với spec nhiều
+    bảng của /data). Dùng chung cache 15 phút + nút Làm mới với nguồn BigQuery."""
+    client = get_bq_client()
+    embed = embeds_store.get_active_embed(client, embed_id)
+    if embed is None:
+        raise HTTPException(404, "Không tìm thấy dashboard này.")
+    sources = embed.get("data_lark_sources")
+    if not sources:
+        raise HTTPException(404, "Dashboard này không có nguồn Lark Base.")
+
+    key, now = f"{embed_id}:lark", time.time()
+    cached = _data_cache.get(key)
+    if cached and (now - cached["loaded_at"]) < Config.EMBED_DATA_CACHE_TTL_SECONDS:
+        return cached["result"]
+
+    try:
+        token = lark_source.get_token()
+        with ThreadPoolExecutor(max_workers=len(sources)) as pool:
+            futures = {name: pool.submit(lark_source.fetch_table, token, url) for name, url in sources.items()}
+            payload = {name: f.result() for name, f in futures.items()}
+    except lark_source.LarkSourceError as e:
+        raise HTTPException(502, str(e)) from e
+
+    _data_cache[key] = {"loaded_at": now, "result": payload}
     return payload

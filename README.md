@@ -23,13 +23,11 @@ tham khảo lại nếu cần.
 ## 2. Dashboard Embeds — dựng & chia sẻ dashboard vào Lark
 
 Trang `/embeds.html`, có hướng dẫn chi tiết ở `/guide.html`. Không cần biết
-code, có 3 cách tạo dashboard:
+code:
 
 - **Upload file HTML tự viết** (tự code, hoặc nhờ AI/Claude Code viết hộ) — app
   chỉ host lại nguyên văn.
-- **Dashboard mẫu dựng sẵn**: chọn 1 bảng BigQuery + vài widget (KPI/Bar/Line/
-  Table), server tự lắp HTML (`app/embeds/template_gen.py`).
-- Trong cả 2 cách, dashboard có thể gắn **nguồn dữ liệu sống**: 1-3 bảng
+- Dashboard có thể gắn **nguồn dữ liệu sống**: 1-3 bảng
   BigQuery qua `data_query_spec` đã validate cứng phía server (không nhận SQL
   tự do, xem `app/embeds/query_spec.py`), hoặc 1 file Excel/CSV user tự tải lên
   (không cần nằm trong BigQuery) — dashboard tự đọc lại bằng SheetJS.
