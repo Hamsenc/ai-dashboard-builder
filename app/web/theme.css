@@ -1,64 +1,65 @@
-/* Design token + base reset dùng chung cho 4 trang app (index/embeds/admin/guide).
-   Đây là NGUỒN THẬT của bảng màu — sửa ở đây, không copy.
-   Giá trị theo chuẩn LSR (skill lsr-report-style mục 7): app đa brand nên accent là
-   xám xanh trung tính, không dùng màu brand HAPAS/MATEMADE. Tên biến giữ như cũ:
-   --series-1 = --primary, --page = --ground, --critical = --bad của skill. */
+/* Design token + shell (sidebar/topbar) dùng chung cho 5 trang app.
+   NGUỒN THẬT của bảng màu — sửa ở đây, không copy.
+   2026-10-24: đổi sang phong cách Lark (xanh #1456F0, nền sáng, bo tròn, nút dạng pill)
+   theo yêu cầu user. Tên biến giữ như cũ: --series-1 = màu chủ đạo, --page = nền. */
 
 :root {
   color-scheme: light;
-  --page:            #F5F6F8;
+  --page:            #F5F6F7;
   --surface:         #FFFFFF;
-  --surface-2:       #EEF0F3;
-  --ink-primary:     #1C2430;
-  --ink-secondary:   #4A5463;
-  --ink-muted:       #616C7B; /* skill ghi #6F7988 (4,4:1) — đậm thêm để đạt 4,5:1 cả trên --surface-2 */
-  --border:          #DDE1E7;
-  --series-1:        #33415C;
-  --series-1-wash:   rgba(51,65,92,0.09);
+  --surface-2:       #F2F3F5;
+  --ink-primary:     #1F2329;
+  --ink-secondary:   #51575F;
+  --ink-muted:       #646A73; /* skill ghi #6F7988 (4,4:1) — đậm thêm để đạt 4,5:1 cả trên --surface-2 */
+  --border:          #DEE0E3;
+  --series-1:        #1456F0;
+  --series-1-wash:   rgba(20,86,240,0.10);
   --on-primary:      #FFFFFF; /* chữ trên nền --series-1 */
-  --good:            #0C7D6E; /* skill #0F8B7A chỉ 4,2:1 cho chữ nhỏ */
-  --critical:        #C2413A;
-  --warning-bg:      #F7EBD3;
-  --warning-ink:     #7A4A0E;
-  --user-bubble:     #E6E9EF;
+  --good:            #007A55; /* skill #0F8B7A chỉ 4,2:1 cho chữ nhỏ */
+  --critical:        #D83931;
+  --warning-bg:      #FFF3D6;
+  --warning-ink:     #8A5300;
+  --user-bubble:     #E1EAFF;
+  --radius:          10px;
+  --shadow:          0 2px 8px rgba(31,35,41,0.08);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --page:            #12161C;
-    --surface:         #1A2029;
-    --surface-2:       #232B36;
-    --ink-primary:     #E8ECF2;
-    --ink-secondary:   #BCC4D0;
-    --ink-muted:       #8B95A3;
-    --border:          #2E3744;
-    --series-1:        #C9D2E3;
-    --series-1-wash:   rgba(201,210,227,0.12);
-    --on-primary:      #12161C;
+    --page:            #17181A;
+    --surface:         #1F2022;
+    --surface-2:       #2A2B2E;
+    --ink-primary:     #EBEBEC;
+    --ink-secondary:   #C2C5CA;
+    --ink-muted:       #92979F;
+    --border:          #36383C;
+    --series-1:        #6C9BFF;
+    --series-1-wash:   rgba(108,155,255,0.16);
+    --on-primary:      #0B1220;
     --good:            #3FC2AE;
-    --critical:        #EF7A72;
+    --critical:        #F5827B;
     --warning-bg:      #3A2E17;
     --warning-ink:     #E3A948;
-    --user-bubble:     #28324A;
+    --user-bubble:     #23304F;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page:            #12161C;
-  --surface:         #1A2029;
-  --surface-2:       #232B36;
-  --ink-primary:     #E8ECF2;
-  --ink-secondary:   #BCC4D0;
-  --ink-muted:       #8B95A3;
-  --border:          #2E3744;
-  --series-1:        #C9D2E3;
-  --series-1-wash:   rgba(201,210,227,0.12);
-  --on-primary:      #12161C;
+  --page:            #17181A;
+  --surface:         #1F2022;
+  --surface-2:       #2A2B2E;
+  --ink-primary:     #EBEBEC;
+  --ink-secondary:   #C2C5CA;
+  --ink-muted:       #92979F;
+  --border:          #36383C;
+  --series-1:        #6C9BFF;
+  --series-1-wash:   rgba(108,155,255,0.16);
+  --on-primary:      #0B1220;
   --good:            #3FC2AE;
-  --critical:        #EF7A72;
+  --critical:        #F5827B;
   --warning-bg:      #3A2E17;
   --warning-ink:     #E3A948;
-  --user-bubble:     #28324A;
+  --user-bubble:     #23304F;
 }
 
 /* Chỉ reset trung tính ở đây. Layout của body là việc của từng trang. */
@@ -67,6 +68,7 @@ body {
   /* Be Vietnam Pro có bộ glyph tiếng Việt (DM Sans cũ thì không — chữ ạ/ố/ử phải
      mượn font hệ thống). Mono (DM Mono) chỉ dùng cho tên bảng/ID/JSON, không cho
      văn bản tiếng Việt. */
+  font-size: 14px;
   font-family: 'Be Vietnam Pro', system-ui, -apple-system, "Segoe UI", sans-serif;
   margin: 0;
   background: var(--page); color: var(--ink-primary);
@@ -75,3 +77,40 @@ body {
 /* Selector kiểu #id { display: flex } có specificity cao hơn [hidden] nên nuốt mất
    thuộc tính hidden. !important để hidden luôn thắng. */
 [hidden] { display: none !important; }
+
+/* ---------- Shell dùng chung: sidebar + topbar (kiểu Lark) ---------- */
+.sidebar {
+  width: 232px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 20px 12px; gap: 4px; overflow-y: auto;
+}
+.sidebar-title { padding: 0 10px 20px; }
+.sidebar-logo { display: block; width: 100%; height: auto; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sidebar-logo { filter: invert(1); } }
+:root[data-theme="dark"] .sidebar-logo { filter: invert(1); }
+.sidebar-link {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px;
+  font-size: 14px; font-weight: 500; color: var(--ink-primary); text-decoration: none;
+}
+.nav-ico { width: 20px; height: 20px; flex-shrink: 0; color: var(--ink-muted); }
+.sidebar-link:hover { background: var(--surface-2); }
+.sidebar-link.active { background: var(--series-1-wash); color: var(--series-1); font-weight: 600; }
+.sidebar-link.active .nav-ico { color: var(--series-1); }
+
+.main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; }
+.topbar {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+  padding: 10px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+}
+#theme-toggle-btn {
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-primary);
+  border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 12px;
+}
+#theme-toggle-btn:hover { background: var(--surface-2); }
+.account-cluster { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-secondary); }
+.account-avatar {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--series-1); color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.account-cluster a { color: var(--series-1); font-weight: 600; text-decoration: none; }
+
+.app-content { display: flex; flex: 1; min-height: 0; }

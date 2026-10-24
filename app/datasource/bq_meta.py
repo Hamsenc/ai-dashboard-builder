@@ -90,13 +90,6 @@ def _fetch_tables_for_dataset(client: bigquery.Client, dataset: str) -> list[dic
     """
     partition_col_by_table = {r["table_name"]: r["column_name"] for r in client.query(partition_sql).result()}
 
-    # SQL view definition cho VIEWs
-    views_sql = f"SELECT table_name, view_definition FROM `{project}.{dataset}.INFORMATION_SCHEMA.VIEWS`"
-    try:
-        views_by_name = {r["table_name"]: r["view_definition"] for r in client.query(views_sql).result()}
-    except Exception:
-        views_by_name = {}
-
     tables = []
     for r in rows:
         stats = stats_by_name.get(r["table_name"])
@@ -111,18 +104,8 @@ def _fetch_tables_for_dataset(client: bigquery.Client, dataset: str) -> list[dic
             "table_name": r["table_name"],
             "table_type": r["table_type"],  # "BASE TABLE" | "VIEW"
             "description": description,
-            # Trích các nhãn chuẩn từ description (11 nhãn)
+            # Fallback khi catalog Lark không có Purpose (enrich_from_lark ghi đè nếu có).
             "purpose": _description_label(description, "Mục đích"),
-            "grain": _description_label(description, "Grain"),
-            "keys_info": _description_label(description, "Khoá"),
-            "source_info": _description_label(description, "Nguồn"),
-            "transformation": _description_label(description, "Đã xử lý"),
-            "scope": _description_label(description, "Phạm vi"),
-            "use_when": _description_label(description, "Dùng khi"),
-            "not_use_when": _description_label(description, "Không dùng khi"),
-            "notes": _description_label(description, "Lưu ý"),
-            "refresh": _description_label(description, "Refresh"),
-            "view_definition": views_by_name.get(r["table_name"], "") or "",
             "row_count": stats["row_count"] if stats and r["table_type"] != "VIEW" else None,
             "size_bytes": stats["size_bytes"] if stats else None,
             "columns": columns_by_table.get(r["table_name"], []),
@@ -187,7 +170,6 @@ def enrich_from_lark(tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
         merged["grain"] = lark.get("grain", "")
         merged["refresh"] = lark.get("refresh", "")
         merged["domain"] = lark.get("domain", "")
-        merged["cluster"] = lark.get("cluster", "")
         pii_note = lark.get("pii_note", "")
         merged["pii_note"] = pii_note
         merged["has_pii"] = bool(pii_note) and pii_note.strip().lower() not in ("không", "no", "none", "")
@@ -204,6 +186,9 @@ def enrich_from_lark(tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
         # Mô tả cấp cột từ Column Dictionary, khớp theo tên cột trong CHÍNH bảng
         # Lark (không phải toàn catalog) — tránh khớp nhầm cột trùng tên ở bảng khác.
+        # calculation_logic/example cũng có trong Column Dictionary nhưng chưa có
+        # nơi nào đọc tới (không hiện ở API/UI) nên không thread qua đây — cần thì
+        # thêm lại 2 dòng, dữ liệu gốc vẫn còn nguyên trong catalog Lark.
         lark_cols_by_name = {c["name"]: c for c in lark.get("columns", [])}
         new_columns = []
         for col in merged.get("columns", []):
@@ -213,8 +198,6 @@ def enrich_from_lark(tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
             # Business Definition (nếu có) đáng tin hơn description rỗng của BigQuery.
             if lark_col and lark_col.get("description"):
                 col["description"] = lark_col["description"]
-            col["calculation_logic"] = lark_col.get("calculation_logic", "") if lark_col else ""
-            col["example"] = lark_col.get("example", "") if lark_col else ""
             col["sentinel_values"] = _parse_sentinel_notes(col.get("description", ""))
             new_columns.append(col)
         merged["columns"] = new_columns

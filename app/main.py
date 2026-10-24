@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pathlib
 
-from api import admin, advise, catalog, dwh, embed_view, embeds
+from api import admin, advise, catalog, embed_view, embeds
 from auth import lark_oauth
 from auth.deps import get_current_user
 from auth.roles import can_use_embeds, is_admin
@@ -20,7 +20,6 @@ app.include_router(advise.router)
 app.include_router(lark_oauth.router)
 app.include_router(embeds.router)
 app.include_router(admin.router)
-app.include_router(dwh.router)
 app.include_router(embed_view.router)  # public, phải đăng ký trước StaticFiles mount bên dưới
 
 
