@@ -105,9 +105,12 @@ def _inject_toolbar(html: str, embed_id: str, embed: dict[str, Any]) -> str:
     toolbar = _toolbar_html(embed_id, embed)
     if not toolbar:
         return html
-    match = _BODY_CLOSE_RE.search(html)
-    if match:
-        idx = match.start()
+    # </body> CUỐI CÙNG, không phải đầu tiên: HTML nhúng thẳng thư viện (VD ECharts có
+    # chuỗi '<body ...></body>' trong code saveAsImage) — chèn vào chỗ đầu tiên sẽ rơi
+    # giữa <script>, </script> của toolbar cắt đôi thư viện, code hiện thành chữ.
+    matches = list(_BODY_CLOSE_RE.finditer(html))
+    if matches:
+        idx = matches[-1].start()
         return html[:idx] + toolbar + html[idx:]
     return html + toolbar
 
