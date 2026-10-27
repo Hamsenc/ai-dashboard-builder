@@ -117,6 +117,8 @@ Chuyển tab bằng `<button onclick="showTab('kenh')">`, **KHÔNG dùng `<a hre
 
 Mặc định **Apache ECharts** (heatmap, waterfall, markArea giai đoạn...), Chart.js cho chart nhỏ đơn giản, Plotly nếu thật cần. Quy tắc tương ứng từng thư viện:
 
+**Kiểm tra link cdnjs trước khi giao** — không phải bản npm nào cũng có trên cdnjs (đã gặp thật: `echarts/5.5.1` có trên npm nhưng cdnjs trả 404, dashboard mất hết biểu đồ). Mỗi `<script src>` chạy `curl -s -o /dev/null -w "%{http_code}" <url>` phải ra `200`. Không nhúng thẳng thư viện vào HTML để né lỗi này — file phình ~1MB, chỉ cần đổi sang phiên bản có thật (VD `echarts/5.5.0`).
+
 **ECharts** — `dispose()` trước `init()`, `resize()` khi mở lại tab và khi đổi cỡ cửa sổ:
 ```js
 var charts = {};
