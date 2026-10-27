@@ -86,6 +86,8 @@ function applyFilters() {
 
 Không patch riêng 1 chart khi filter đổi — luôn đi qua `applyFilters()` → `renderDashboard()`. Mỗi hàm vẽ chart tự huỷ instance cũ trước khi vẽ (xem 3.3).
 
+Bộ lọc làm giảm mạnh dữ liệu (khoảng ngày, brand, kho) nên lọc phía server bằng `param` (Bước 5 — "Lọc động"): đổi bộ lọc đó → `fetch('data?...')` lại → gán `ALL_ROWS` mới → `applyFilters()`. Các bộ lọc nhỏ còn lại vẫn lọc trên `ALL_ROWS` như trên. Hiện trạng thái "Đang tải..." khi fetch lại vì có thể mất vài giây.
+
 ### 3.2 Tab — vẽ khi mở lần đầu (lazy)
 
 Chốt 1 cách duy nhất: **chỉ vẽ tab khi nó được mở lần đầu**, không vẽ sẵn tab ẩn (chart init trong `display:none` bị kích thước 0).
@@ -165,7 +167,7 @@ Dùng 1 hàm format duy nhất cho mọi chỗ hiện số (KPI, bảng, tick, t
   2. User upload các file headless này TRƯỚC (xem Bước 6) để có `embed_id` thật cho từng cái.
   3. Trong file HTML chính, hardcode URL tuyệt đối tới các embed đó: `fetch('/d/<embed_id-đã-có>/data')`, cộng với `fetch('data')` cho chính spec của nó (đơn hoặc nhiều bảng, tối đa 10).
   4. Vẫn chỉ có **1 link duy nhất** (file chính) đưa cho người xem — các file headless không ai cần mở trực tiếp.
-- Trước khi coi là xong, tự test cục bộ trong scratchpad: dựng 1 `http.server` giả lập route `/d/{id}` và `/d/{id}/data` (trả JSON mock cùng cấu trúc `{columns, rows}` sẽ nhận từ BigQuery thật), `node --check` soát cú pháp JS, và chụp ảnh bằng headless Chrome (`--headless=new --screenshot`) để xác nhận layout/số liệu hiển thị đúng — đặc biệt nếu có nhiều tab/filter thì dùng 1 đoạn script tự động click qua từng trạng thái trước khi chụp. Dọn hết file test (mock JSON, server.py, ảnh png) sau khi xong, chỉ để lại các file HTML thật sẽ giao cho user.
+- Trước khi coi là xong, tự test cục bộ trong scratchpad: dựng 1 `http.server` giả lập route `/d/{id}` và `/d/{id}/data` (trả JSON mock cùng cấu trúc `{columns, rows}` sẽ nhận từ BigQuery thật; nếu dùng `param` thì route mock phải nhận cả `/d/{id}/data?...` và lọc mock theo tham số, để test được luồng đổi bộ lọc → fetch lại), `node --check` soát cú pháp JS, và chụp ảnh bằng headless Chrome (`--headless=new --screenshot`) để xác nhận layout/số liệu hiển thị đúng — đặc biệt nếu có nhiều tab/filter thì dùng 1 đoạn script tự động click qua từng trạng thái trước khi chụp. Dọn hết file test (mock JSON, server.py, ảnh png) sau khi xong, chỉ để lại các file HTML thật sẽ giao cho user.
 
 ## Bước 5 — Soạn `data_query_spec` (nếu muốn dữ liệu sống)
 
@@ -237,7 +239,6 @@ function loadData(f) {                     // f = {tu_ngay: '2026-10-01', brand:
 - Giá trị sai kiểu (VD `tu_ngay=abc` với type DATE) → 400; khoảng lọc quá rộng (quét > 500MB) → 413. JS nên đọc `detail` trong JSON lỗi và hiện ra, thay vì vẽ trống.
 - Spec nhiều bảng dùng chung 1 bộ tham số: mọi bảng khai báo `param: "tu_ngay"` cùng lọc theo 1 giá trị.
 - Mỗi bộ giá trị cache riêng 15 phút. Tham số không khai báo trong spec bị bỏ qua.
-- Muốn nhúng cùng 1 dashboard vào nhiều chỗ trong Lark với bộ lọc khác nhau: gọi `fetch('data' + location.search)` rồi nhúng link `/d/{id}?brand=HPVN`.
 
 ### Nhiều bảng trong 1 embed (tối đa 10)
 
@@ -306,7 +307,7 @@ truy cập bằng `row['⬜ Ngày']`. Xem tên field thật bằng MCP `base_rec
 
 Dùng được CÙNG LÚC với `data_query_spec` BigQuery trong 1 dashboard: HTML gọi cả `fetch('data')` lẫn `fetch('lark-data')`.
 
-Giao cho user: dặn khi upload điền ô **"📋 Thêm bảng Lark Base"** (nằm riêng dưới 4 ô chọn nguồn, không thay thế BigQuery), mỗi dòng dán `tên | link bảng` (link copy
+Giao cho user: dặn khi upload điền ô **"📋 Thêm bảng Lark Base"** (nằm riêng dưới mục "Dữ liệu sống", không thay thế BigQuery/File), mỗi dòng dán `tên | link bảng` (link copy
 trên thanh địa chỉ khi đang mở đúng bảng; có `view=` thì chỉ lấy theo bộ lọc của view đó).
 
 ## Bước 6 — Giao sản phẩm cho user
@@ -317,14 +318,14 @@ Trả lời user gồm:
 2. **(Nếu có dữ liệu sống)** khối JSON `data_query_spec` tương ứng, và hướng dẫn cụ thể:
    - Vào `https://ai-dashboard-builder-2eodhfgo5a-as.a.run.app/embeds.html` (tab "📊 Nhúng dashboard vào Lark"), cần đăng nhập Lark trước; chỉ user đã được thêm vào whitelist upload mới thấy được form.
    - Nhập **Tên dashboard**, chọn **File HTML**.
-   - Nếu muốn dữ liệu tự cập nhật: bật toggle **"Bật dữ liệu sống"** → chọn chế độ **"📝 Nhập JSON trực tiếp"** → dán đúng khối JSON bạn đưa (hoặc chọn **"🖱️ Chọn bằng dropdown"** để tự bấm chọn bảng/cột/hàm tương đương nếu họ muốn tự chỉnh tay — dropdown chỉ chọn được 1 bảng, spec nhiều bảng (`{"specs": {...}}`) hoặc có `joins` BẮT BUỘC dùng chế độ JSON).
+   - Nếu muốn dữ liệu tự cập nhật: ở mục **"Dữ liệu sống"** chọn **"🗄️ Bảng BigQuery"** → chọn chế độ **"📝 Nhập JSON trực tiếp"** → dán đúng khối JSON bạn đưa (hoặc chọn **"🖱️ Chọn bằng dropdown"** để tự bấm chọn bảng/cột/hàm tương đương nếu họ muốn tự chỉnh tay — dropdown chỉ chọn được 1 bảng, spec nhiều bảng (`{"specs": {...}}`) hoặc có `joins` BẮT BUỘC dùng chế độ JSON).
    - Bấm **Upload** → nhận link `/d/{embed_id}` → copy link đó dán thẳng vào Lark (nhúng dạng iframe/embed bình thường, không cần cấu hình gì thêm — đã test thật, hoạt động).
    - Nếu dùng pattern nhiều file (Bước 4): nhắc user upload các file **headless trước**, lấy `embed_id` thật của từng cái, rồi báo lại cho Claude để sửa URL cứng trong file chính trước khi họ upload file chính (hoặc Claude tự đoán trước 1 placeholder rõ ràng và dặn user tìm-thay bằng embed_id thật).
    - Sau này muốn đổi tên, đổi `data_query_spec`, hoặc thay file HTML (giao diện/logic mới): bấm **"✏️ Sửa"** trong danh sách embed → sửa field cần đổi, hoặc chọn file mới ở ô **"File HTML"** (để trống nếu giữ file cũ) → **Lưu thay đổi** — link KHÔNG đổi, không cần gửi lại hay sửa chỗ đã nhúng trong Lark. Chỉ bấm **"Thu hồi"** khi muốn tắt hẳn link.
 
 Nếu tóm tắt lại toàn bộ hướng dẫn trên thành 1 dòng ngắn gọn kiểu "Cách nhúng: ..." ở cuối câu trả lời, LUÔN viết đầy đủ URL tuyệt đối `https://ai-dashboard-builder-2eodhfgo5a-as.a.run.app/embeds.html` ngay ở bước đầu tiên — TUYỆT ĐỐI không rút gọn thành đường dẫn tương đối kiểu `/embeds.html`, vì user đọc dòng tóm tắt đó cần bấm/copy thẳng được, không tự suy ra domain từ ngữ cảnh. Mẫu:
 
-> **Cách nhúng:** truy cập https://ai-dashboard-builder-2eodhfgo5a-as.a.run.app/embeds.html → tab "📊 Nhúng dashboard vào Lark" → nhập tên, chọn file HTML trên → bật "Dữ liệu sống" → "📝 Nhập JSON trực tiếp" → dán JSON trên → Upload → copy link `/d/{id}` dán vào Lark.
+> **Cách nhúng:** truy cập https://ai-dashboard-builder-2eodhfgo5a-as.a.run.app/embeds.html → tab "📊 Nhúng dashboard vào Lark" → nhập tên, chọn file HTML trên → mục "Dữ liệu sống" chọn "🗄️ Bảng BigQuery" → "📝 Nhập JSON trực tiếp" → dán JSON trên → Upload → copy link `/d/{id}` dán vào Lark.
 
 ## Việc không được làm
 
@@ -332,3 +333,5 @@ Nếu tóm tắt lại toàn bộ hướng dẫn trên thành 1 dòng ngắn g�
 - Không tự ý mở rộng phạm vi bảng ra ngoài whitelist Serving để "cho tiện" — nếu bảng cần thiết nằm ngoài whitelist, phải tạo view pass-through (Bước 2), không có cách nào khác.
 - Không quên authorized-view access ở TOÀN BỘ chuỗi dataset khi tạo view mới — thiếu 1 hop sẽ ra lỗi 500 khó chẩn đoán từ log, không phải lỗi spec.
 - Không so sánh/suy diễn số liệu ở 1 chiều dữ liệu mà 1 trong các bảng nguồn không có (lệch grain) — chỉ so sánh ở mức chung mà cả hai bảng đều có.
+- Không JOIN khi khoá `on` không duy nhất ở bảng JOIN (SUM bị nhân lên) — kiểm tra bằng query thật trước, không giả định.
+- Không hardcode giá trị lọc (ngày, brand, kho...) trong `filters[].value` chỉ vì thấy trong dữ liệu mẫu — bộ lọc người xem cần đổi thì dùng `param`.
