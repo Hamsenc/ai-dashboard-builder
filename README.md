@@ -27,8 +27,8 @@ code:
 
 - **Upload file HTML tự viết** (tự code, hoặc nhờ AI/Claude Code viết hộ) — app
   chỉ host lại nguyên văn.
-- Dashboard có thể gắn **nguồn dữ liệu sống**: 1-3 bảng
-  BigQuery qua `data_query_spec` đã validate cứng phía server (không nhận SQL
+- Dashboard có thể gắn **nguồn dữ liệu sống**: 1-10 bảng
+  BigQuery (có JOIN, lọc động theo tham số URL) qua `data_query_spec` đã validate cứng phía server (không nhận SQL
   tự do, xem `app/embeds/query_spec.py`), hoặc 1 file Excel/CSV user tự tải lên
   (không cần nằm trong BigQuery) — dashboard tự đọc lại bằng SheetJS.
 

@@ -64,7 +64,7 @@ Nếu cần join/so sánh nhiều bảng (VD 1 bảng actual + 1 bảng target),
   # lặp lại cho 10_lsr (và bất kỳ dataset trung gian nào khác trong chuỗi)
   ```
 
-- Nếu chỉ cần dashboard "tĩnh" (số liệu chốt tại lúc build, không cần tự cập nhật) thì bỏ qua toàn bộ ràng buộc này — chỉ cần query 1 lần lấy số thật rồi nhúng cứng vào HTML, không cần `data_query_spec` (xem Bước 5). Đây cũng là lựa chọn hợp lý khi cần JOIN nhiều bảng hoặc logic quá phức tạp cho 1 tầng aggregation.
+- Nếu chỉ cần dashboard "tĩnh" (số liệu chốt tại lúc build, không cần tự cập nhật) thì bỏ qua toàn bộ ràng buộc này — chỉ cần query 1 lần lấy số thật rồi nhúng cứng vào HTML, không cần `data_query_spec` (xem Bước 5). Đây cũng là lựa chọn hợp lý khi logic quá phức tạp cho spec (subquery, window function, tỷ lệ phải tính trước khi gộp...).
 
 ## Bước 3 — Giao diện theo `lsr-report-style`, ràng buộc kỹ thuật theo app
 
@@ -159,11 +159,11 @@ Dùng 1 hàm format duy nhất cho mọi chỗ hiện số (KPI, bảng, tick, t
 
 - Viết file HTML **đầy đủ**, tự có `<!doctype html><html><head><meta charset="utf-8">...`. KHÔNG viết theo kiểu fragment (như Claude Artifacts tự động bọc) — route `/d/{embed_id}` của app KHÔNG tự bọc HTML, thiếu phần này từng gây lỗi hiển thị tiếng Việt (mojibake) khi test thật.
 - Nếu dashboard chỉ cần 1 grain dữ liệu (1 bảng, 1 cách nhóm) → 1 file, dùng `fetch('data')` trả về `{columns, rows}` (đường dẫn tương đối — app tự chèn `<base href="/d/{embed_id}/">` nên luôn trỏ đúng).
-- Nếu cần nhiều grain khác nhau (ví dụ: xu hướng theo ngày + snapshot theo SKU + snapshot theo kho), **tối đa 3 bảng**: 1 embed dùng được `data_query_spec` dạng nhiều bảng (xem Bước 5) — `fetch('data')` lúc đó trả về `{tên_1: {columns, rows}, tên_2: {...}, ...}` (object có key là đúng tên bạn đặt trong spec) thay vì object phẳng, code JS phải đọc theo đúng tên đó.
-- Nếu cần HƠN 3 bảng (hiếm, cân nhắc lại xem có nên gộp bớt bằng view trước) mới cần tới workaround "nhiều embed":
+- Nếu cần nhiều grain khác nhau (ví dụ: xu hướng theo ngày + snapshot theo SKU + snapshot theo kho), **tối đa 10 bảng**: 1 embed dùng được `data_query_spec` dạng nhiều bảng (xem Bước 5) — `fetch('data')` lúc đó trả về `{tên_1: {columns, rows}, tên_2: {...}, ...}` (object có key là đúng tên bạn đặt trong spec) thay vì object phẳng, code JS phải đọc theo đúng tên đó.
+- Nếu cần HƠN 10 bảng (hiếm, cân nhắc lại xem có nên gộp bớt bằng JOIN/view trước) mới cần tới workaround "nhiều embed":
   1. Viết thêm các file HTML "headless" tối giản (không cần đẹp, chỉ cần không rỗng) — mỗi file 1 `data_query_spec` riêng.
   2. User upload các file headless này TRƯỚC (xem Bước 6) để có `embed_id` thật cho từng cái.
-  3. Trong file HTML chính, hardcode URL tuyệt đối tới các embed đó: `fetch('/d/<embed_id-đã-có>/data')`, cộng với `fetch('data')` cho chính spec của nó (đơn hoặc nhiều bảng, tối đa 3).
+  3. Trong file HTML chính, hardcode URL tuyệt đối tới các embed đó: `fetch('/d/<embed_id-đã-có>/data')`, cộng với `fetch('data')` cho chính spec của nó (đơn hoặc nhiều bảng, tối đa 10).
   4. Vẫn chỉ có **1 link duy nhất** (file chính) đưa cho người xem — các file headless không ai cần mở trực tiếp.
 - Trước khi coi là xong, tự test cục bộ trong scratchpad: dựng 1 `http.server` giả lập route `/d/{id}` và `/d/{id}/data` (trả JSON mock cùng cấu trúc `{columns, rows}` sẽ nhận từ BigQuery thật), `node --check` soát cú pháp JS, và chụp ảnh bằng headless Chrome (`--headless=new --screenshot`) để xác nhận layout/số liệu hiển thị đúng — đặc biệt nếu có nhiều tab/filter thì dùng 1 đoạn script tự động click qua từng trạng thái trước khi chụp. Dọn hết file test (mock JSON, server.py, ảnh png) sau khi xong, chỉ để lại các file HTML thật sẽ giao cho user.
 
@@ -176,10 +176,12 @@ Dùng 1 hàm format duy nhất cho mọi chỗ hiện số (KPI, bảng, tick, t
   "table_id": "surya-495408.00_serving_inventory.vw_ten_moi",
   "columns": ["brand_id", "warehouse_code"],
   "aggregations": [
-    {"column": "physical_qty", "fn": "SUM", "alias": "physical_qty_sum"}
+    {"column": "physical_qty", "fn": "SUM", "alias": "physical_qty_sum"},
+    {"column": "sku", "fn": "COUNT_DISTINCT", "alias": "so_sku"}
   ],
   "filters": [
-    {"column": "brand_id", "op": "eq", "value": "HPVN", "type": "STRING"}
+    {"column": "brand_id", "op": "in", "value": ["HPVN"], "type": "STRING", "param": "brand"},
+    {"column": "snapshot_date", "op": "gte", "type": "DATE", "param": "tu_ngay"}
   ],
   "order_by": [{"column": "physical_qty_sum", "direction": "desc"}],
   "limit": 500
@@ -189,15 +191,55 @@ Dùng 1 hàm format duy nhất cho mọi chỗ hiện số (KPI, bảng, tick, t
 Ràng buộc phải tôn trọng khi soạn (server sẽ từ chối nếu sai):
 - `table_id`: đúng bảng đã xác nhận ở Bước 2 (nằm trong 1 trong 3 dataset serving whitelist).
 - `columns` / `aggregations[].column` / `filters[].column`: phải là tên cột THẬT của bảng đó — không suy đoán.
-- `aggregations[].fn`: chỉ `SUM | COUNT | AVG | MIN | MAX`. `alias`: chỉ chữ/số/gạch dưới, không bắt đầu bằng số, không trùng tên cột hay alias khác.
-- `filters[].op`: chỉ `eq|ne|gt|gte|lt|lte`. `filters[].type`: chỉ `STRING|INT64|FLOAT64|BOOL|DATE|TIMESTAMP` — phải khớp kiểu thật của cột.
+- `aggregations[].fn`: chỉ `SUM | COUNT | COUNT_DISTINCT | AVG | MIN | MAX`. `alias`: chỉ chữ/số/gạch dưới, không bắt đầu bằng số, không trùng tên cột hay alias khác.
+- `filters[].op`: chỉ `eq|ne|gt|gte|lt|lte|in` (`in` thì `value` là mảng). `filters[].type`: chỉ `STRING|INT64|FLOAT64|BOOL|DATE|TIMESTAMP` — phải khớp kiểu thật của cột.
+- `filters[].param` (tuỳ chọn): tên tham số URL để người xem tự đổi giá trị lọc — xem "Lọc động" bên dưới. Có `param` thì `value` thành giá trị mặc định (bỏ trống = mặc định không lọc).
 - `order_by[].column`: BẮT BUỘC phải là 1 tên nằm trong `columns` hoặc là 1 `alias` của `aggregations` — không sort được theo cột chưa SELECT.
 - Có cả `columns` và `aggregations` → tự động `GROUP BY` theo `columns`. Chỉ có `aggregations` (không `columns`) → trả về đúng 1 dòng tổng hợp toàn bảng.
-- `limit`: số nguyên dương, tối đa 20000 (mặc định 500 nếu bỏ trống).
+- `limit`: số nguyên dương, mặc định 500. Tổng `limit` mọi bảng trong 1 dashboard tối đa 100.000 dòng (payload tự nén gzip, 100.000 dòng ~1MB truyền đi, nhưng lần chạy đầu sau khi hết cache mất ~10-15s).
 - Mỗi spec bị chặn nếu dry-run ước lượng quét quá 500MB (`EMBED_DATA_MAX_BYTES_BILLED`) — với view nặng, chạy `bq query --dry_run` kiểm tra trước. Các spec chạy song song; kết quả app lưu đệm 15 phút, nút ↻ Làm mới trên dashboard bỏ qua lưu đệm.
-- Không hỗ trợ JOIN/subquery/SQL tự do trong spec — logic phức tạp hơn phải giải quyết bằng cách tạo view ở Bước 2, giữ spec ở đây đơn giản (1 bảng, 1 tầng aggregation).
+- Không hỗ trợ subquery/SQL tự do — chỉ JOIN (xem dưới) + 1 tầng aggregation. Logic phức tạp hơn thì tạo view ở Bước 2.
 
-### Nhiều bảng trong 1 embed (tối đa 3)
+### JOIN nhiều bảng trong 1 spec
+
+```json
+{
+  "table_id": "surya-495408.00_serving_sales.vw_sales_hourly_sku_wh_bst20102026",
+  "joins": [{
+    "table_id": "surya-495408.00_serving_inventory.vw_inventory_sku_wh_bst20102026",
+    "as": "inv", "type": "left",
+    "on": [{"left": "sku", "right": "sku"}, {"left": "brand_id", "right": "brand_id"}]
+  }],
+  "columns": ["sku", "inv.avail_qty"],
+  "aggregations": [{"column": "net_sales", "fn": "SUM", "alias": "doanh_thu"}]
+}
+```
+
+- Bảng JOIN cũng phải nằm trong 3 dataset serving. `type`: `left` (mặc định) hoặc `inner`. `as`: chữ/số/gạch dưới, khác `t`.
+- Cột bảng chính viết trần (`"sku"`), cột bảng JOIN viết `"inv.avail_qty"` — ở mọi chỗ (columns, aggregations, filters, order_by). Trong `rows` trả về, cột JOIN có tên `inv_avail_qty`.
+- `on[].left`: cột bảng chính (hoặc bảng JOIN khai báo trước đó); `on[].right`: cột của chính bảng đang JOIN.
+- **Kiểm tra grain trước khi JOIN**: khoá `on` phải là duy nhất ở bảng JOIN, nếu không SUM bên bảng chính bị nhân lên. Không chắc thì `bq query` đếm `COUNT(*)` vs `COUNT(DISTINCT khoá)` trước.
+
+### Lọc động theo người xem (`param`)
+
+Filter có `param` nhận giá trị từ URL của `fetch('data?...')` — BigQuery lọc thẳng (quét ít hơn, trả ít dòng hơn), thay vì kéo hết về rồi lọc bằng JS. Dùng cho bộ lọc làm giảm mạnh dữ liệu (khoảng ngày, brand, kho); bộ lọc nhỏ còn lại vẫn lọc phía JS như 3.1.
+
+```js
+function loadData(f) {                     // f = {tu_ngay: '2026-10-01', brand: ['HPVN', 'MMVN']}
+  var q = new URLSearchParams();
+  if (f.tu_ngay) q.append('tu_ngay', f.tu_ngay);
+  (f.brand || []).forEach(b => q.append('brand', b));   // op "in": lặp lại tên tham số
+  return fetch('data?' + q).then(r => r.json());        // đổi bộ lọc -> gọi lại -> renderDashboard
+}
+```
+
+- Không truyền tham số → dùng `value` trong spec (nếu có), không có thì bỏ điều kiện đó. Truyền rỗng (`?brand=`) → bỏ lọc kể cả khi có `value` (dùng cho lựa chọn "Tất cả").
+- Giá trị sai kiểu (VD `tu_ngay=abc` với type DATE) → 400; khoảng lọc quá rộng (quét > 500MB) → 413. JS nên đọc `detail` trong JSON lỗi và hiện ra, thay vì vẽ trống.
+- Spec nhiều bảng dùng chung 1 bộ tham số: mọi bảng khai báo `param: "tu_ngay"` cùng lọc theo 1 giá trị.
+- Mỗi bộ giá trị cache riêng 15 phút. Tham số không khai báo trong spec bị bỏ qua.
+- Muốn nhúng cùng 1 dashboard vào nhiều chỗ trong Lark với bộ lọc khác nhau: gọi `fetch('data' + location.search)` rồi nhúng link `/d/{id}?brand=HPVN`.
+
+### Nhiều bảng trong 1 embed (tối đa 10)
 
 Nếu dashboard cần nhiều grain/bảng (Bước 4), bọc từng spec đơn ở trên vào 1 object `specs`, mỗi key là 1 tên bạn tự đặt (chỉ chữ/số/gạch dưới, không bắt đầu bằng số — đây cũng là key mà `fetch('data')` trả về):
 
@@ -210,9 +252,9 @@ Nếu dashboard cần nhiều grain/bảng (Bước 4), bọc từng spec đơn 
 }
 ```
 
-Tối đa 3 key trong `specs` — quá số này server từ chối lúc upload. Vượt quá 3 bảng thì dùng pattern nhiều embed ở Bước 4.
+Tối đa 10 key trong `specs`, tổng `limit` ≤ 100.000 — quá mức này server từ chối lúc upload.
 
-Nếu vẫn cần vượt quá 3 bảng (pattern nhiều embed ở Bước 4), soạn 1 khối JSON RIÊNG cho từng file (ghi rõ khối nào ứng với file nào khi giao cho user).
+Nếu vẫn cần vượt quá 10 bảng (pattern nhiều embed ở Bước 4), soạn 1 khối JSON RIÊNG cho từng file (ghi rõ khối nào ứng với file nào khi giao cho user).
 
 Lưu ý cache: metadata cột của app có TTL cache 10 phút (`app/datasource/bq_meta.py`). Nếu vừa tạo/sửa view ở Bước 2, đợi ít nhất ~10 phút trước khi user upload spec dùng cột mới, nếu không sẽ gặp lỗi "cột không tồn tại" dù cột đã có thật — không phải bug, chỉ cần đợi rồi thử lại.
 
@@ -275,7 +317,7 @@ Trả lời user gồm:
 2. **(Nếu có dữ liệu sống)** khối JSON `data_query_spec` tương ứng, và hướng dẫn cụ thể:
    - Vào `https://ai-dashboard-builder-2eodhfgo5a-as.a.run.app/embeds.html` (tab "📊 Nhúng dashboard vào Lark"), cần đăng nhập Lark trước; chỉ user đã được thêm vào whitelist upload mới thấy được form.
    - Nhập **Tên dashboard**, chọn **File HTML**.
-   - Nếu muốn dữ liệu tự cập nhật: bật toggle **"Bật dữ liệu sống"** → chọn chế độ **"📝 Nhập JSON trực tiếp"** → dán đúng khối JSON bạn đưa (hoặc chọn **"🖱️ Chọn bằng dropdown"** để tự bấm chọn bảng/cột/hàm tương đương nếu họ muốn tự chỉnh tay — dropdown chỉ chọn được 1 bảng, spec nhiều bảng (`{"specs": {...}}`) BẮT BUỘC dùng chế độ JSON).
+   - Nếu muốn dữ liệu tự cập nhật: bật toggle **"Bật dữ liệu sống"** → chọn chế độ **"📝 Nhập JSON trực tiếp"** → dán đúng khối JSON bạn đưa (hoặc chọn **"🖱️ Chọn bằng dropdown"** để tự bấm chọn bảng/cột/hàm tương đương nếu họ muốn tự chỉnh tay — dropdown chỉ chọn được 1 bảng, spec nhiều bảng (`{"specs": {...}}`) hoặc có `joins` BẮT BUỘC dùng chế độ JSON).
    - Bấm **Upload** → nhận link `/d/{embed_id}` → copy link đó dán thẳng vào Lark (nhúng dạng iframe/embed bình thường, không cần cấu hình gì thêm — đã test thật, hoạt động).
    - Nếu dùng pattern nhiều file (Bước 4): nhắc user upload các file **headless trước**, lấy `embed_id` thật của từng cái, rồi báo lại cho Claude để sửa URL cứng trong file chính trước khi họ upload file chính (hoặc Claude tự đoán trước 1 placeholder rõ ràng và dặn user tìm-thay bằng embed_id thật).
    - Sau này muốn đổi tên, đổi `data_query_spec`, hoặc thay file HTML (giao diện/logic mới): bấm **"✏️ Sửa"** trong danh sách embed → sửa field cần đổi, hoặc chọn file mới ở ô **"File HTML"** (để trống nếu giữ file cũ) → **Lưu thay đổi** — link KHÔNG đổi, không cần gửi lại hay sửa chỗ đã nhúng trong Lark. Chỉ bấm **"Thu hồi"** khi muốn tắt hẳn link.

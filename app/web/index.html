@@ -742,24 +742,26 @@ const DATA_QUERY_SPEC_CONTRACT = `--- Cấu trúc data_query_spec.json (BẮT BU
   "table_id": "<đúng y hệt table_id ghi ở mỗi bảng bên trên>",
   "columns": ["<cột dùng để nhóm/group by — để mảng rỗng [] nếu không cần nhóm>"],
   "aggregations": [
-    {"column": "<tên cột số thật>", "fn": "SUM|COUNT|AVG|MIN|MAX", "alias": "<tên_kết_quả>"}
+    {"column": "<tên cột thật>", "fn": "SUM|COUNT|COUNT_DISTINCT|AVG|MIN|MAX", "alias": "<tên_kết_quả>"}
   ],
   "filters": [
-    {"column": "<tên cột thật>", "op": "eq|ne|gt|gte|lt|lte", "value": <giá trị>, "type": "STRING|INT64|FLOAT64|BOOL|DATE|TIMESTAMP"}
+    {"column": "<tên cột thật>", "op": "eq|ne|gt|gte|lt|lte|in", "value": <giá trị, hoặc mảng nếu op là in>, "type": "STRING|INT64|FLOAT64|BOOL|DATE|TIMESTAMP", "param": "<tuỳ chọn: tên tham số URL>"}
   ],
   "order_by": [{"column": "<tên cột hoặc alias>", "direction": "asc|desc"}],
   "limit": 500
 }
 Quy tắc bắt buộc:
 - table_id / columns / aggregations[].column / filters[].column: PHẢI là tên cột THẬT lấy đúng từ schema bên trên — không suy đoán, không tự đặt tên khác, không dịch sang tiếng Anh/Việt.
-- aggregations[].fn chỉ nhận đúng 1 trong: SUM, COUNT, AVG, MIN, MAX. alias chỉ gồm chữ/số/gạch dưới, không bắt đầu bằng số, không trùng tên cột hay alias khác trong cùng spec.
-- filters[].op chỉ nhận: eq, ne, gt, gte, lt, lte. filters[].type phải khớp đúng kiểu dữ liệu thật của cột đó (xem cột "Kiểu" trong schema).
+- aggregations[].fn chỉ nhận đúng 1 trong: SUM, COUNT, COUNT_DISTINCT (đếm không trùng), AVG, MIN, MAX. alias chỉ gồm chữ/số/gạch dưới, không bắt đầu bằng số, không trùng tên cột hay alias khác trong cùng spec.
+- filters[].op chỉ nhận: eq, ne, gt, gte, lt, lte, in (in thì value là mảng). filters[].type phải khớp đúng kiểu dữ liệu thật của cột đó (xem cột "Kiểu" trong schema).
+- filters[].param (tuỳ chọn): cho người xem tự chọn giá trị lọc. Dashboard gọi fetch('data?tu_ngay=2026-10-01&brand=HPVN&brand=MMVN') (op in: lặp lại tên tham số), server lọc thẳng trên BigQuery. Không truyền tham số -> dùng value (nếu có) hoặc bỏ điều kiện; truyền rỗng (?brand=) -> bỏ lọc. Đây là cách đúng để làm bộ lọc ngày/brand/kho thay vì hardcode giá trị.
 - order_by[].column phải là 1 tên nằm trong "columns" hoặc là 1 alias trong "aggregations" — không sort được theo cột chưa chọn.
 - Có cả columns và aggregations -> tự động GROUP BY theo columns. Chỉ có aggregations (columns rỗng) -> trả về đúng 1 dòng tổng hợp toàn bảng.
-- KHÔNG hỗ trợ JOIN/subquery/SQL tự do — mỗi spec chỉ 1 bảng, 1 tầng aggregation.
-- limit: số nguyên dương, tối đa 20000, mặc định 500 nếu bỏ trống.
+- JOIN (tuỳ chọn): "joins": [{"table_id": "<bảng thứ 2 bên trên>", "as": "inv", "type": "left|inner", "on": [{"left": "<cột bảng chính>", "right": "<cột bảng inv>"}]}]. Cột bảng JOIN viết "inv.<cột>" ở mọi chỗ, trong rows trả về có tên "inv_<cột>". Khoá on phải duy nhất ở bảng JOIN, nếu không SUM bị nhân lên.
+- KHÔNG hỗ trợ subquery/SQL tự do — chỉ JOIN + 1 tầng aggregation.
+- limit: số nguyên dương, mặc định 500 nếu bỏ trống. Tổng limit mọi bảng trong 1 dashboard tối đa 100000.
 
---- Nếu cần dùng NHIỀU BẢNG trong 1 dashboard (tối đa 3 bảng) ---
+--- Nếu cần dùng NHIỀU BẢNG trong 1 dashboard (tối đa 10 bảng) ---
 Bọc các spec đơn ở trên vào 1 object "specs", mỗi key là 1 tên bạn tự đặt (chỉ chữ/số/gạch dưới, không bắt đầu bằng số — đây cũng là key mà fetch('data') sẽ trả về):
 {
   "specs": {

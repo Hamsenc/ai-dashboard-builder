@@ -92,7 +92,7 @@
   .dyn-row {
     display: grid; grid-template-columns: 1.3fr 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px;
   }
-  .dyn-row.filter-row { grid-template-columns: 1.1fr 0.7fr 1.1fr auto; }
+  .dyn-row.filter-row { grid-template-columns: 1.1fr 0.7fr 1fr 0.9fr auto; }
 
   .dyn-row-remove {
     border: none; background: transparent; color: var(--critical); cursor: pointer; font-size: 16px;
@@ -234,8 +234,9 @@
       <p class="hint" style="margin-top:0;" id="bigquery-panel-hint">
         Trong file HTML, gọi <code>fetch('data')</code> lúc trang load để lấy JSON <code>{columns, rows}</code>
         — app tự chèn <code>&lt;base&gt;</code> nên URL tương đối luôn trỏ đúng chỗ. Nếu dùng nhiều bảng (chế
-        độ JSON, tối đa 3 bảng/dashboard) thì <code>fetch('data')</code> trả về <code>{tên_bảng: {columns, rows}, ...}</code>
-        thay vì 1 object phẳng.
+        độ JSON, tối đa 10 bảng/dashboard) thì <code>fetch('data')</code> trả về <code>{tên_bảng: {columns, rows}, ...}</code>
+        thay vì 1 object phẳng. Cho người xem tự lọc (VD: chọn khoảng ngày, kho): điền ô "tham số URL" ở điều
+        kiện lọc, HTML gọi <code>fetch('data?tu_ngay=2026-10-01')</code> — server lọc thẳng trên BigQuery.
       </p>
 
       <div class="mode-tabs" id="spec-mode-tabs">
@@ -278,7 +279,7 @@
           </div>
 
           <div class="sub-label">Giới hạn số dòng trả về</div>
-          <input type="number" id="spec-limit" class="limit-row" value="500" min="1" max="20000" />
+          <input type="number" id="spec-limit" class="limit-row" value="500" min="1" max="100000" />
         </div>
       </div>
 
@@ -287,13 +288,20 @@
         <textarea id="f-spec-advanced" placeholder='{"table_id": "surya-495408.00_serving_sales.vw_...", "columns": ["region"], "aggregations": [{"column": "revenue", "fn": "SUM", "alias": "total_revenue"}]}'></textarea>
         <p class="hint">
           Không hỗ trợ SQL tự do — chỉ nhận spec JSON: <code>table_id</code>, <code>columns</code>,
-          <code>aggregations[]</code> ({column, fn, alias}), <code>filters[]</code> ({column, op, value, type}),
-          <code>order_by[]</code> ({column, direction}), <code>limit</code> (tối đa 20000, mặc định 500).
+          <code>aggregations[]</code> ({column, fn, alias}, fn: SUM/COUNT/COUNT_DISTINCT/AVG/MIN/MAX),
+          <code>filters[]</code> ({column, op, value, type, param?}, op thêm <code>in</code> với value là mảng),
+          <code>order_by[]</code> ({column, direction}), <code>limit</code> (mặc định 500).
+        </p>
+        <p class="hint">
+          <code>filters[].param</code>: tên tham số URL người xem tự truyền — <code>fetch('data?kho=HN&amp;kho=HCM')</code>.
+          Không truyền thì dùng <code>value</code> (nếu có) hoặc bỏ điều kiện; truyền rỗng (<code>?kho=</code>) = bỏ lọc.
+          <code>joins[]</code>: <code>{"table_id", "as": "inv", "type": "left|inner", "on": [{"left": "sku", "right": "sku"}]}</code>
+          — cột bảng JOIN viết <code>"inv.stock"</code>, trả về tên <code>inv_stock</code>.
         </p>
         <p class="hint">
           Cần dữ liệu từ nhiều bảng trong cùng 1 dashboard? Bọc các spec trên vào 1 object
-          <code>{"specs": {"tên_1": {...}, "tên_2": {...}}}</code> — tối đa 3 bảng, mỗi spec con vẫn theo đúng cấu
-          trúc ở trên (chỉ đặt tên khác nhau cho từng cái). Chỉ hỗ trợ ở chế độ JSON này, dropdown chỉ chọn được 1 bảng.
+          <code>{"specs": {"tên_1": {...}, "tên_2": {...}}}</code> — tối đa 10 bảng, tổng <code>limit</code> mọi bảng
+          ≤ 100.000 dòng, mỗi spec con vẫn theo đúng cấu trúc ở trên. Nhiều bảng và JOIN chỉ hỗ trợ ở chế độ JSON này.
         </p>
       </div>
     </div>
@@ -383,8 +391,9 @@ const DATASET_LABELS = {
   '00_serving_inventory': 'Tồn kho (Inventory)',
   '00_serving_operation': 'Vận hành (Operation)',
 };
-const AGG_FN_LABELS = { SUM: 'Tổng (SUM)', COUNT: 'Đếm (COUNT)', AVG: 'Trung bình (AVG)', MIN: 'Nhỏ nhất (MIN)', MAX: 'Lớn nhất (MAX)' };
-const FILTER_OP_LABELS = { eq: '=', ne: '≠', gt: '>', gte: '≥', lt: '<', lte: '≤' };
+const AGG_FN_LABELS = { SUM: 'Tổng (SUM)', COUNT: 'Đếm (COUNT)', COUNT_DISTINCT: 'Đếm không trùng', AVG: 'Trung bình (AVG)', MIN: 'Nhỏ nhất (MIN)', MAX: 'Lớn nhất (MAX)' };
+const FILTER_OP_LABELS = { eq: '=', ne: '≠', gt: '>', gte: '≥', lt: '<', lte: '≤', in: 'thuộc' };
+const NUMERIC_TYPES = ['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC'];
 
 function setButtonBusy(btn, busyText) {
   if (btn.dataset.originalText === undefined) btn.dataset.originalText = btn.textContent;
@@ -543,23 +552,27 @@ function addFilterRow(initial) {
     <select class="filter-op">${Object.entries(FILTER_OP_LABELS).map(([v, l]) =>
       `<option value="${v}" ${initial && initial.op === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <span class="filter-value-slot"></span>
+    <input type="text" class="filter-param" placeholder="tham số URL (tuỳ chọn)" title="Đặt tên để người xem tự đổi giá trị: fetch('data?tên=giá_trị'). Để trống ô giá trị = mặc định không lọc." />
     <button type="button" class="dyn-row-remove" title="Xóa">×</button>
   `;
+  row.querySelector('.filter-param').value = (initial && initial.param) || '';
   const renderValueInput = (presetValue) => {
     const colName = row.querySelector('.filter-column').value;
     const col = (selectedTable.columns || []).find(c => c.name === colName);
     const bqType = col ? col.type : 'STRING';
+    const isIn = row.querySelector('.filter-op').value === 'in';
     const slot = row.querySelector('.filter-value-slot');
     slot.innerHTML = '';
     const input = document.createElement('input');
-    input.type = bqTypeToInputType(bqType);
+    input.type = isIn ? 'text' : bqTypeToInputType(bqType);
     input.className = 'filter-value';
-    input.placeholder = 'giá trị';
+    input.placeholder = isIn ? 'giá trị, cách nhau dấu phẩy' : 'giá trị';
     input.dataset.bqType = bqType;
-    if (presetValue !== undefined) input.value = presetValue;
+    if (presetValue !== undefined) input.value = Array.isArray(presetValue) ? presetValue.join(', ') : presetValue;
     slot.appendChild(input);
   };
   row.querySelector('.filter-column').addEventListener('change', () => renderValueInput());
+  row.querySelector('.filter-op').addEventListener('change', () => renderValueInput());
   row.querySelector('.dyn-row-remove').addEventListener('click', () => row.remove());
   document.getElementById('filter-rows').appendChild(row);
   renderValueInput(initial ? initial.value : undefined);
@@ -587,10 +600,18 @@ function buildSpecFromForm() {
   }));
   const filters = Array.from(document.querySelectorAll('#filter-rows .dyn-row')).map(row => {
     const valueInput = row.querySelector('.filter-value');
-    let value = valueInput.value;
     const bqType = valueInput.dataset.bqType;
-    if (['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC'].includes(bqType)) value = Number(value);
-    return { column: row.querySelector('.filter-column').value, op: row.querySelector('.filter-op').value, value, type: bqType };
+    const op = row.querySelector('.filter-op').value;
+    const f = { column: row.querySelector('.filter-column').value, op, type: bqType };
+    const param = row.querySelector('.filter-param').value.trim();
+    if (param) f.param = param;
+    const raw = valueInput.value.trim();
+    if (raw !== '') {
+      let values = op === 'in' ? raw.split(',').map(v => v.trim()).filter(Boolean) : [raw];
+      if (NUMERIC_TYPES.includes(bqType)) values = values.map(Number);
+      f.value = op === 'in' ? values : values[0];
+    }
+    return f;
   });
   const orderColumn = document.getElementById('order-column').value;
   const spec = {
@@ -685,8 +706,8 @@ async function enterEditMode(embed) {
   if (embed.data_query_spec) {
     document.querySelector('input[name="data-mode"][value="bigquery"]').checked = true;
     document.getElementById('bigquery-data-panel').hidden = false;
-    if (embed.data_query_spec.specs) {
-      // Spec nhiều bảng -> dropdown chỉ đại diện được 1 bảng, mở thẳng chế độ JSON.
+    if (embed.data_query_spec.specs || embed.data_query_spec.joins) {
+      // Spec nhiều bảng/JOIN -> dropdown chỉ đại diện được 1 bảng, mở thẳng chế độ JSON.
       document.querySelector('input[name="spec-mode"][value="json"]').checked = true;
       document.getElementById('picker-mode').hidden = true;
       document.getElementById('json-mode').hidden = false;
@@ -1074,9 +1095,10 @@ function renderShareList(embedId, container, shares) {
 }
 
 function query_spec_summary(spec) {
-  // spec 1 bảng cũ: {table_id, columns, ...}. Spec nhiều bảng mới: {tênBảng: {table_id, columns, ...}}
-  const entries = spec.table_id ? [spec] : Object.values(spec);
-  return entries.map(s => `${s.table_id} (${(s.columns || []).join(', ') || '*'})`).join(', ');
+  // spec 1 bảng cũ: {table_id, columns, ...}. Spec nhiều bảng: {specs: {tênBảng: {table_id, columns, ...}}}
+  const entries = spec.table_id ? [spec] : Object.values(spec.specs || spec);
+  return entries.map(s => [s.table_id, ...(s.joins || []).map(j => j.table_id)].join(' ⋈ ')
+    + ` (${(s.columns || []).join(', ') || '*'})`).join(', ');
 }
 
 async function revokeEmbed(embedId, btn) {

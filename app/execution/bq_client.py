@@ -58,7 +58,9 @@ def execute(
         maximum_bytes_billed=max_bytes_billed, query_parameters=query_parameters
     )
     job = client.query(sql, job_config=job_config)
-    result = job.result()
+    # page_size: trang mặc định (~10MB JSON) phình ~170MB RAM lúc parse — đã đo với
+    # 77.000 dòng dữ liệu sống embed: đỉnh 217MB -> 130MB, chỉ chậm thêm ~0,5s.
+    result = job.result(page_size=20000)
 
     columns = [field.name for field in result.schema]
     rows = [dict(row.items()) for row in result]

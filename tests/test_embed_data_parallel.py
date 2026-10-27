@@ -1,6 +1,7 @@
 """Test /d/{id}/data chạy các spec song song mà vẫn trả đúng payload {tên: kết quả}.
 Giả lập store/BigQuery bằng monkeypatch — không cần credentials/network."""
 
+import json
 import sys
 import pathlib
 import threading
@@ -9,6 +10,7 @@ import time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "app"))
 
 from api import embed_view
+from starlette.requests import Request
 
 
 def test_multi_spec_runs_in_parallel():
@@ -26,12 +28,12 @@ def test_multi_spec_runs_in_parallel():
 
     embed_view.get_bq_client = lambda: None
     embed_view.embeds_store.get_active_embed = lambda c, i: {"data_query_spec": {"specs": {}}}
-    embed_view.query_spec.build_queries = lambda c, s: {n: n for n in names}
+    embed_view.query_spec.build_queries = lambda c, s, p: {n: n for n in names}
     embed_view._run_plan = fake_run_plan
     embed_view.invalidate_cache("e1")
 
     t0 = time.time()
-    payload = embed_view.get_embed_data("e1")
+    payload = json.loads(embed_view.get_embed_data("e1", Request({"type": "http", "query_string": b"", "headers": []})).body)
     assert time.time() - t0 < 0.5, "3 query phải chạy song song"
     assert peak[0] == 3
     assert payload == {n: {"columns": ["x"], "rows": [{"x": n}]} for n in names}

@@ -5,6 +5,8 @@ Lark không có session cookie của app này."""
 
 from __future__ import annotations
 
+import gzip
+import json
 import mimetypes
 import re
 import time
@@ -18,7 +20,7 @@ from datasource.preview import _serialize_value
 from embeds import lark_source, query_spec
 from embeds.gcs_store import download_bytes, download_html
 from execution import bq_client
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from storage import embeds_store
 
@@ -159,10 +161,15 @@ def get_embed_data_file(embed_id: str):
     return Response(content=content, media_type=content_type)
 
 
-# Cache in-process kết quả query sống theo embed_id — dashboard chỉ load lại lúc
-# mở trang/bấm refresh (không tự poll), cache chỉ để tránh nhiều người mở cùng
-# lúc gây tốn BigQuery lặp lại vô ích trên 1 link công khai.
-_data_cache: dict[str, dict[str, Any]] = {}
+# Cache in-process kết quả query sống: embed_id -> {khoá -> {loaded_at, body}}, khoá là
+# bộ tham số URL (nguồn BigQuery) hoặc "lark". Lưu sẵn JSON đã gzip thay vì object
+# Python — đo thật 77.000 dòng: ~50MB dạng dict, gzip còn ~1MB. Dashboard chỉ load
+# lại lúc mở trang/bấm refresh (không tự poll), cache chỉ để tránh nhiều người mở
+# cùng lúc gây tốn BigQuery lặp lại vô ích trên 1 link công khai.
+_data_cache: dict[str, dict[Any, dict[str, Any]]] = {}
+# ponytail: quá ngưỡng thì xoá sạch cache của embed đó (chặn tham số rác làm phình RAM),
+# đổi sang LRU nếu dashboard nào thật sự cần nhiều hơn chừng này bộ lọc khác nhau.
+_MAX_CACHE_ENTRIES_PER_EMBED = 50
 
 
 def invalidate_cache(embed_id: str) -> None:
@@ -172,7 +179,23 @@ def invalidate_cache(embed_id: str) -> None:
     khác vẫn có thể trả cache cũ tới khi tự hết EMBED_DATA_CACHE_TTL_SECONDS (chấp
     nhận được, không phải ranh giới bảo mật, chỉ ảnh hưởng độ mới của số liệu)."""
     _data_cache.pop(embed_id, None)
-    _data_cache.pop(f"{embed_id}:lark", None)
+
+
+def _cached_json(embed_id: str, key: Any, request: Request, compute) -> Response:
+    now = time.time()
+    entries = _data_cache.setdefault(embed_id, {})
+    hit = entries.get(key)
+    if hit and (now - hit["loaded_at"]) < Config.EMBED_DATA_CACHE_TTL_SECONDS:
+        body = hit["body"]
+    else:
+        raw = json.dumps(compute(), ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+        body = gzip.compress(raw.encode("utf-8"), compresslevel=6)
+        if len(entries) >= _MAX_CACHE_ENTRIES_PER_EMBED:
+            entries.clear()
+        entries[key] = {"loaded_at": now, "body": body}
+    if "gzip" in request.headers.get("accept-encoding", ""):
+        return Response(body, media_type="application/json", headers={"Content-Encoding": "gzip"})
+    return Response(gzip.decompress(body), media_type="application/json")
 
 
 def _run_plan(client, plan: query_spec.QueryPlan) -> dict[str, Any]:
@@ -188,7 +211,9 @@ def _run_plan(client, plan: query_spec.QueryPlan) -> dict[str, Any]:
 
 
 @router.get("/{embed_id}/data")
-def get_embed_data(embed_id: str):
+def get_embed_data(embed_id: str, request: Request):
+    """Tham số URL (?tên=giá_trị, lặp lại tên cho op 'in') chỉ được đọc nếu spec khai
+    báo filters[].param trùng tên — luôn đi vào SQL bằng query parameter."""
     client = get_bq_client()
     embed = embeds_store.get_active_embed(client, embed_id)
     if embed is None:
@@ -196,40 +221,42 @@ def get_embed_data(embed_id: str):
     if not embed.get("data_query_spec"):
         raise HTTPException(404, "Dashboard này không có dữ liệu sống.")
 
-    now = time.time()
-    cached = _data_cache.get(embed_id)
-    if cached and (now - cached["loaded_at"]) < Config.EMBED_DATA_CACHE_TTL_SECONDS:
-        return cached["result"]
-
     spec_dict = embed["data_query_spec"]
-    try:
-        # Build lại từ spec đã lưu (không dùng bản build lúc upload) để luôn theo
-        # schema/scope MỚI NHẤT — an toàn nếu bảng nguồn đổi cột hoặc bị rút khỏi
-        # SERVING_DATASETS sau khi embed đã tạo.
-        if query_spec.is_multi_spec(spec_dict):
-            # Spec nhiều bảng (mới) -> payload {tên: {columns, rows}}. Spec 1 bảng
-            # (cũ, embed tạo trước tính năng này) -> payload {columns, rows} phẳng
-            # như trước giờ, để KHÔNG bể các dashboard đã upload/nhúng Lark từ trước.
-            plans = query_spec.build_queries(client, spec_dict)
-            # Chạy song song: mỗi query tốn dry-run + chạy thật (~5s), chạy lần lượt
-            # 3 spec khiến người mở đầu tiên sau khi hết cache phải chờ ~15s.
-            with ThreadPoolExecutor(max_workers=len(plans)) as pool:
-                futures = {name: pool.submit(_run_plan, client, plan) for name, plan in plans.items()}
-                payload = {name: f.result() for name, f in futures.items()}
-        else:
-            plan = query_spec.build_query(client, spec_dict)
-            payload = _run_plan(client, plan)
-    except bq_meta.OutOfScopeError as e:
-        raise HTTPException(403, str(e)) from e
-    except query_spec.InvalidQuerySpecError as e:
-        raise HTTPException(400, str(e)) from e
+    params = {
+        name: request.query_params.getlist(name)
+        for name in sorted(query_spec.declared_params(spec_dict))
+        if name in request.query_params
+    }
 
-    _data_cache[embed_id] = {"loaded_at": now, "result": payload}
-    return payload
+    def compute():
+        try:
+            # Build lại từ spec đã lưu (không dùng bản build lúc upload) để luôn theo
+            # schema/scope MỚI NHẤT — an toàn nếu bảng nguồn đổi cột hoặc bị rút khỏi
+            # SERVING_DATASETS sau khi embed đã tạo.
+            if query_spec.is_multi_spec(spec_dict):
+                # Spec nhiều bảng (mới) -> payload {tên: {columns, rows}}. Spec 1 bảng
+                # (cũ, embed tạo trước tính năng này) -> payload {columns, rows} phẳng
+                # như trước giờ, để KHÔNG bể các dashboard đã upload/nhúng Lark từ trước.
+                plans = query_spec.build_queries(client, spec_dict, params)
+                # Chạy song song: mỗi query tốn dry-run + chạy thật (~5s), chạy lần lượt
+                # nhiều spec khiến người mở đầu tiên sau khi hết cache phải chờ rất lâu.
+                with ThreadPoolExecutor(max_workers=len(plans)) as pool:
+                    futures = {name: pool.submit(_run_plan, client, plan) for name, plan in plans.items()}
+                    return {name: f.result() for name, f in futures.items()}
+            return _run_plan(client, query_spec.build_query(client, spec_dict, params))
+        except bq_meta.OutOfScopeError as e:
+            raise HTTPException(403, str(e)) from e
+        except query_spec.InvalidQuerySpecError as e:
+            raise HTTPException(400, str(e)) from e
+        except bq_client.QueryTooExpensiveError as e:  # người xem chọn khoảng lọc quá rộng
+            raise HTTPException(413, str(e)) from e
+
+    key = tuple((name, tuple(values)) for name, values in params.items())
+    return _cached_json(embed_id, key, request, compute)
 
 
 @router.get("/{embed_id}/lark-data")
-def get_embed_lark_data(embed_id: str):
+def get_embed_lark_data(embed_id: str, request: Request):
     """Dữ liệu sống từ Lark Base -> {tên: {columns, rows}} (cùng shape với spec nhiều
     bảng của /data). Dùng chung cache 15 phút + nút Làm mới với nguồn BigQuery."""
     client = get_bq_client()
@@ -240,18 +267,13 @@ def get_embed_lark_data(embed_id: str):
     if not sources:
         raise HTTPException(404, "Dashboard này không có nguồn Lark Base.")
 
-    key, now = f"{embed_id}:lark", time.time()
-    cached = _data_cache.get(key)
-    if cached and (now - cached["loaded_at"]) < Config.EMBED_DATA_CACHE_TTL_SECONDS:
-        return cached["result"]
+    def compute():
+        try:
+            token = lark_source.get_token()
+            with ThreadPoolExecutor(max_workers=len(sources)) as pool:
+                futures = {name: pool.submit(lark_source.fetch_table, token, url) for name, url in sources.items()}
+                return {name: f.result() for name, f in futures.items()}
+        except lark_source.LarkSourceError as e:
+            raise HTTPException(502, str(e)) from e
 
-    try:
-        token = lark_source.get_token()
-        with ThreadPoolExecutor(max_workers=len(sources)) as pool:
-            futures = {name: pool.submit(lark_source.fetch_table, token, url) for name, url in sources.items()}
-            payload = {name: f.result() for name, f in futures.items()}
-    except lark_source.LarkSourceError as e:
-        raise HTTPException(502, str(e)) from e
-
-    _data_cache[key] = {"loaded_at": now, "result": payload}
-    return payload
+    return _cached_json(embed_id, "lark", request, compute)

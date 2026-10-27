@@ -67,3 +67,8 @@ class Config:
     # lúc mở trang/bấm refresh (không tự poll), cache này chỉ để tránh nhiều người
     # mở cùng lúc làm tốn BigQuery lặp lại vô ích.
     EMBED_DATA_CACHE_TTL_SECONDS = int(os.environ.get("EMBED_DATA_CACHE_TTL_SECONDS", "900"))
+    # Giới hạn query sống BigQuery của 1 dashboard: số bảng (specs) và TỔNG limit dòng mọi
+    # bảng. Kết quả cache dạng gzip (embed_view.py) nên 100.000 dòng chỉ ~1-3MB truyền đi;
+    # trần thật là RAM lúc dựng JSON (~1Gi/instance, xem deploy.sh) — tăng thì tăng cả RAM.
+    EMBED_DATA_MAX_SPECS = int(os.environ.get("EMBED_DATA_MAX_SPECS", "10"))
+    EMBED_DATA_MAX_ROWS = int(os.environ.get("EMBED_DATA_MAX_ROWS", "100000"))
