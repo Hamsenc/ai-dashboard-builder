@@ -163,11 +163,11 @@ Dùng 1 hàm format duy nhất cho mọi chỗ hiện số (KPI, bảng, tick, t
 
 - Viết file HTML **đầy đủ**, tự có `<!doctype html><html><head><meta charset="utf-8">...`. KHÔNG viết theo kiểu fragment (như Claude Artifacts tự động bọc) — route `/d/{embed_id}` của app KHÔNG tự bọc HTML, thiếu phần này từng gây lỗi hiển thị tiếng Việt (mojibake) khi test thật.
 - Nếu dashboard chỉ cần 1 grain dữ liệu (1 bảng, 1 cách nhóm) → 1 file, dùng `fetch('data')` trả về `{columns, rows}` (đường dẫn tương đối — app tự chèn `<base href="/d/{embed_id}/">` nên luôn trỏ đúng).
-- Nếu cần nhiều grain khác nhau (ví dụ: xu hướng theo ngày + snapshot theo SKU + snapshot theo kho), **tối đa 10 bảng**: 1 embed dùng được `data_query_spec` dạng nhiều bảng (xem Bước 5) — `fetch('data')` lúc đó trả về `{tên_1: {columns, rows}, tên_2: {...}, ...}` (object có key là đúng tên bạn đặt trong spec) thay vì object phẳng, code JS phải đọc theo đúng tên đó.
-- Nếu cần HƠN 10 bảng (hiếm, cân nhắc lại xem có nên gộp bớt bằng JOIN/view trước) mới cần tới workaround "nhiều embed":
+- Nếu cần nhiều grain khác nhau (ví dụ: xu hướng theo ngày + snapshot theo SKU + snapshot theo kho), **tối đa 20 bảng**: 1 embed dùng được `data_query_spec` dạng nhiều bảng (xem Bước 5) — `fetch('data')` lúc đó trả về `{tên_1: {columns, rows}, tên_2: {...}, ...}` (object có key là đúng tên bạn đặt trong spec) thay vì object phẳng, code JS phải đọc theo đúng tên đó.
+- Nếu cần HƠN 20 bảng (hiếm, cân nhắc lại xem có nên gộp bớt bằng JOIN/view trước) mới cần tới workaround "nhiều embed":
   1. Viết thêm các file HTML "headless" tối giản (không cần đẹp, chỉ cần không rỗng) — mỗi file 1 `data_query_spec` riêng.
   2. User upload các file headless này TRƯỚC (xem Bước 6) để có `embed_id` thật cho từng cái.
-  3. Trong file HTML chính, hardcode URL tuyệt đối tới các embed đó: `fetch('/d/<embed_id-đã-có>/data')`, cộng với `fetch('data')` cho chính spec của nó (đơn hoặc nhiều bảng, tối đa 10).
+  3. Trong file HTML chính, hardcode URL tuyệt đối tới các embed đó: `fetch('/d/<embed_id-đã-có>/data')`, cộng với `fetch('data')` cho chính spec của nó (đơn hoặc nhiều bảng, tối đa 20).
   4. Vẫn chỉ có **1 link duy nhất** (file chính) đưa cho người xem — các file headless không ai cần mở trực tiếp.
 - Trước khi coi là xong, tự test cục bộ trong scratchpad: dựng 1 `http.server` giả lập route `/d/{id}` và `/d/{id}/data` (trả JSON mock cùng cấu trúc `{columns, rows}` sẽ nhận từ BigQuery thật; nếu dùng `param` thì route mock phải nhận cả `/d/{id}/data?...` và lọc mock theo tham số, để test được luồng đổi bộ lọc → fetch lại), `node --check` soát cú pháp JS, và chụp ảnh bằng headless Chrome (`--headless=new --screenshot`) để xác nhận layout/số liệu hiển thị đúng — đặc biệt nếu có nhiều tab/filter thì dùng 1 đoạn script tự động click qua từng trạng thái trước khi chụp. Dọn hết file test (mock JSON, server.py, ảnh png) sau khi xong, chỉ để lại các file HTML thật sẽ giao cho user.
 
@@ -242,7 +242,7 @@ function loadData(f) {                     // f = {tu_ngay: '2026-10-01', brand:
 - Spec nhiều bảng dùng chung 1 bộ tham số: mọi bảng khai báo `param: "tu_ngay"` cùng lọc theo 1 giá trị.
 - Mỗi bộ giá trị cache riêng 15 phút. Tham số không khai báo trong spec bị bỏ qua.
 
-### Nhiều bảng trong 1 embed (tối đa 10)
+### Nhiều bảng trong 1 embed (tối đa 20)
 
 Nếu dashboard cần nhiều grain/bảng (Bước 4), bọc từng spec đơn ở trên vào 1 object `specs`, mỗi key là 1 tên bạn tự đặt (chỉ chữ/số/gạch dưới, không bắt đầu bằng số — đây cũng là key mà `fetch('data')` trả về):
 
@@ -255,9 +255,9 @@ Nếu dashboard cần nhiều grain/bảng (Bước 4), bọc từng spec đơn 
 }
 ```
 
-Tối đa 10 key trong `specs`, tổng `limit` ≤ 100.000 — quá mức này server từ chối lúc upload.
+Tối đa 20 key trong `specs`, tổng `limit` ≤ 100.000 — quá mức này server từ chối lúc upload.
 
-Nếu vẫn cần vượt quá 10 bảng (pattern nhiều embed ở Bước 4), soạn 1 khối JSON RIÊNG cho từng file (ghi rõ khối nào ứng với file nào khi giao cho user).
+Nếu vẫn cần vượt quá 20 bảng (pattern nhiều embed ở Bước 4), soạn 1 khối JSON RIÊNG cho từng file (ghi rõ khối nào ứng với file nào khi giao cho user).
 
 Lưu ý cache: metadata cột của app có TTL cache 10 phút (`app/datasource/bq_meta.py`). Nếu vừa tạo/sửa view ở Bước 2, đợi ít nhất ~10 phút trước khi user upload spec dùng cột mới, nếu không sẽ gặp lỗi "cột không tồn tại" dù cột đã có thật — không phải bug, chỉ cần đợi rồi thử lại.
 

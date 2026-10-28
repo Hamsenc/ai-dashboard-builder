@@ -148,7 +148,7 @@
     <li><strong>🗄️ Bảng BigQuery</strong> — <code>fetch('data')</code> trả <code>{columns, rows}</code>. Không nhận SQL tự
       do, chỉ nhận spec JSON (<code>table_id</code>, <code>columns</code>, <code>aggregations[]</code>,
       <code>filters[]</code>, <code>order_by[]</code>, <code>joins[]</code>, <code>limit</code> mặc định 500). Hàm: SUM, COUNT,
-      COUNT_DISTINCT, AVG, MIN, MAX. Nhiều bảng: bọc vào <code>{"specs": {"tên": {...}}}</code>, tối đa 10 bảng, tổng
+      COUNT_DISTINCT, AVG, MIN, MAX. Nhiều bảng: bọc vào <code>{"specs": {"tên": {...}}}</code>, tối đa 20 bảng, tổng
       <code>limit</code> ≤ 100.000 dòng — khi đó <code>fetch('data')</code> trả <code>{tên: {columns, rows}}</code>. Bộ lọc
       cho người xem tự đổi: filter có <code>param</code>, HTML gọi <code>fetch('data?tu_ngay=2026-10-01')</code>.</li>
     <li><strong>📄 File Excel/CSV</strong> — cho dữ liệu không có trong BigQuery. <code>fetch('data-file')</code> trả nguyên
@@ -182,7 +182,7 @@
   <p>Dùng khi tài khoản Claude/ChatGPT đang dùng KHÔNG kết nối được BigQuery công ty. App chuẩn bị sẵn dữ liệu mẫu +
     hướng dẫn để AI tự viết file HTML.</p>
   <ol class="skill-steps">
-    <li><strong>Tích chọn bảng.</strong> Ở tab <a href="/">🗂️ Tư vấn chọn bảng</a>, tích các bảng cần dùng (tối đa 10 bảng
+    <li><strong>Tích chọn bảng.</strong> Ở tab <a href="/">🗂️ Tư vấn chọn bảng</a>, tích các bảng cần dùng (tối đa 20 bảng
       nếu cần dữ liệu sống).</li>
     <li><strong>Lấy prompt + file mẫu.</strong> Trong khay "Bảng đang chọn": bấm "📋 Copy prompt" rồi "📄 Tải data preview
       kèm mô tả" (schema, số dòng thật, grain, 50 dòng mẫu/bảng).</li>

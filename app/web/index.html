@@ -761,7 +761,7 @@ Quy tắc bắt buộc:
 - KHÔNG hỗ trợ subquery/SQL tự do — chỉ JOIN + 1 tầng aggregation.
 - limit: số nguyên dương, mặc định 500 nếu bỏ trống. Tổng limit mọi bảng trong 1 dashboard tối đa 100000.
 
---- Nếu cần dùng NHIỀU BẢNG trong 1 dashboard (tối đa 10 bảng) ---
+--- Nếu cần dùng NHIỀU BẢNG trong 1 dashboard (tối đa 20 bảng) ---
 Bọc các spec đơn ở trên vào 1 object "specs", mỗi key là 1 tên bạn tự đặt (chỉ chữ/số/gạch dưới, không bắt đầu bằng số — đây cũng là key mà fetch('data') sẽ trả về):
 {
   "specs": {
