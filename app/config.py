@@ -11,13 +11,13 @@ class Config:
     BQ_APP_TABLE_PREFIX = os.environ.get("BQ_APP_TABLE_PREFIX", "raw_dashboard_builder_")
     CATALOG_GCS_BUCKET = os.environ.get("CATALOG_GCS_BUCKET", "surya-495408-dashboard-builder-catalog")
 
-    # Hàng rào cứng phạm vi dữ liệu: CHỈ 3 dataset tầng Serving này được phép đọc
+    # Hàng rào cứng phạm vi dữ liệu: CHỈ các dataset này (3 tầng Serving + z_hapas_reporting) được phép đọc
     # metadata/preview. datasource/bq_meta.assert_in_scope() kiểm tra mọi table_id
     # nhận từ client với danh sách này trước khi chạm BigQuery.
     SERVING_DATASETS = [
         d.strip()
         for d in os.environ.get(
-            "SERVING_DATASETS", "00_serving_sales,00_serving_inventory,00_serving_operation"
+            "SERVING_DATASETS", "00_serving_sales,00_serving_inventory,00_serving_operation,z_hapas_reporting"
         ).split(",")
         if d.strip()
     ]

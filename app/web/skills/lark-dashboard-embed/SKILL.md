@@ -40,9 +40,9 @@ Nếu cần join/so sánh nhiều bảng (VD 1 bảng actual + 1 bảng target),
 
 ## Bước 2 — Xác định bảng có dùng được cho "dữ liệu sống" không
 
-Đây là ràng buộc cứng của app, enforce ở server (`app/embeds/query_spec.py` + `app/datasource/bq_meta.py::assert_in_scope`), không phải gợi ý: **"dữ liệu sống" (live query khi user mở link) chỉ chạy được trên bảng/view nằm TRỰC TIẾP trong 3 dataset `00_serving_sales`, `00_serving_inventory`, `00_serving_operation` của project `surya-495408`.** Query nhắm bảng ở dataset khác (kể cả `09_logic_serving`, `10_lsr`, hay project khác) sẽ bị app từ chối lúc user upload (lỗi 403 "không thuộc phạm vi dữ liệu Serving").
+Đây là ràng buộc cứng của app, enforce ở server (`app/embeds/query_spec.py` + `app/datasource/bq_meta.py::assert_in_scope`), không phải gợi ý: **"dữ liệu sống" (live query khi user mở link) chỉ chạy được trên bảng/view nằm TRỰC TIẾP trong 4 dataset `00_serving_sales`, `00_serving_inventory`, `00_serving_operation`, `z_hapas_reporting` của project `surya-495408`.** Query nhắm bảng ở dataset khác (kể cả `09_logic_serving`, `10_lsr`, hay project khác) sẽ bị app từ chối lúc user upload (lỗi 403 "không thuộc phạm vi dữ liệu Serving").
 
-- Nếu bảng nguồn đã nằm sẵn trong 1 trong 3 dataset đó → dùng thẳng, sang Bước 3.
+- Nếu bảng nguồn đã nằm sẵn trong 1 trong 4 dataset đó → dùng thẳng, sang Bước 3.
 - Nếu bảng nguồn nằm ở `09_logic_serving` hay `10_lsr` (hoặc cần transform/join trước khi show) → tạo 1 view pass-through mới ở `00_serving_*` tương ứng (đặt tên `vw_...`), rồi cấp authorized-view access cho toàn bộ chuỗi đọc:
 
   ```bash
@@ -193,7 +193,7 @@ Dùng 1 hàm format duy nhất cho mọi chỗ hiện số (KPI, bảng, tick, t
 ```
 
 Ràng buộc phải tôn trọng khi soạn (server sẽ từ chối nếu sai):
-- `table_id`: đúng bảng đã xác nhận ở Bước 2 (nằm trong 1 trong 3 dataset serving whitelist).
+- `table_id`: đúng bảng đã xác nhận ở Bước 2 (nằm trong 1 trong 4 dataset whitelist).
 - `columns` / `aggregations[].column` / `filters[].column`: phải là tên cột THẬT của bảng đó — không suy đoán.
 - `aggregations[].fn`: chỉ `SUM | COUNT | COUNT_DISTINCT | AVG | MIN | MAX`. `alias`: chỉ chữ/số/gạch dưới, không bắt đầu bằng số, không trùng tên cột hay alias khác.
 - `filters[].op`: chỉ `eq|ne|gt|gte|lt|lte|in` (`in` thì `value` là mảng). `filters[].type`: chỉ `STRING|INT64|FLOAT64|BOOL|DATE|TIMESTAMP` — phải khớp kiểu thật của cột.
@@ -219,7 +219,7 @@ Ràng buộc phải tôn trọng khi soạn (server sẽ từ chối nếu sai):
 }
 ```
 
-- Bảng JOIN cũng phải nằm trong 3 dataset serving. `type`: `left` (mặc định) hoặc `inner`. `as`: chữ/số/gạch dưới, khác `t`.
+- Bảng JOIN cũng phải nằm trong 4 dataset whitelist. `type`: `left` (mặc định) hoặc `inner`. `as`: chữ/số/gạch dưới, khác `t`.
 - Cột bảng chính viết trần (`"sku"`), cột bảng JOIN viết `"inv.avail_qty"` — ở mọi chỗ (columns, aggregations, filters, order_by). Trong `rows` trả về, cột JOIN có tên `inv_avail_qty`.
 - `on[].left`: cột bảng chính (hoặc bảng JOIN khai báo trước đó); `on[].right`: cột của chính bảng đang JOIN.
 - **Kiểm tra grain trước khi JOIN**: khoá `on` phải là duy nhất ở bảng JOIN, nếu không SUM bên bảng chính bị nhân lên. Không chắc thì `bq query` đếm `COUNT(*)` vs `COUNT(DISTINCT khoá)` trước.

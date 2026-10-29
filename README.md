@@ -62,7 +62,7 @@ sẻ (`view` hoặc `edit`) cho người khác hoặc cho toàn nội bộ (`*`)
 ## Hạ tầng đã có (project `surya-495408`, region `asia-southeast1`)
 
 - Service account: `dashboard-builder@surya-495408.iam.gserviceaccount.com`
-  (READER trên `00_serving_sales`/`00_serving_inventory`/`00_serving_operation`,
+  (READER trên `00_serving_sales`/`00_serving_inventory`/`00_serving_operation`/`z_hapas_reporting`,
   WRITER trên `12_data_agent_log`, project-level `bigquery.jobUser`).
 - GCS bucket catalog: `gs://surya-495408-dashboard-builder-catalog` (catalog Lark,
   dùng để làm giàu metadata bảng — không bắt buộc, app vẫn chạy nếu đọc lỗi).
